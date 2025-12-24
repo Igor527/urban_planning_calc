@@ -5,9 +5,59 @@
  * 
  * Входные данные: площади, коэффициенты, район, год РНС
  * Выходные данные: Nп, Nг, Nв, Nк, итоговые расчёты с разбивкой по типам
+ * 
+ * ОЖИДАЕМЫЕ ВХОДНЫЕ ПАРАМЕТРЫ (inputData):
+ * - areaFlats          : Суммарная площадь квартир
+ * - areaNNP            : Нежилая наземная площадь
+ * - districtName       : Название района (для определения K2)
+ * - ttkStatus          : Расположение относительно ТТК ('inside'/'outside')
+ * - metroDistance      : Расстояние до станции метро (м) (для определения K1)
+ * - rnsYear            : Год выдачи РНС (влияет на % электромобилей)
+ * 
+ * ФАКТИЧЕСКИ РАЗМЕЩЕННЫЕ МЕСТА (inputData):
+ * - fact_zu_mo         : Места остановки (на участке)
+ * - fact_zu_guest_mgn  : Гостевые МГН (на участке)
+ * - fact_zu_priob_mgn  : Приобъектные МГН (на участке)
+ * - fact_uds_mo        : Места остановки (на УДС)
+ * - fact_uds_guest     : Гостевые (на УДС)
+ * - fact_uds_guest_mgn : Гостевые МГН (на УДС)
+ * - fact_uds_priob     : Приобъектные (на УДС)
+ * - fact_uds_priob_mgn : Приобъектные МГН (на УДС)
  */
 
 class ParkingCalculator {
+        /**
+         * Получить отклонения по расчётам (разница между требуемым и фактическим, min/max)
+         */
+        getDeviations() {
+            const res = this.results || {};
+            const deviations = [];
+            if (typeof res.N_required === 'number' && typeof res.factualPlaces === 'number') {
+                deviations.push({
+                    name: 'Отклонение от требуемого',
+                    formula: 'Δ = фактическое - требуемое',
+                    value: res.factualPlaces - res.N_required,
+                    unit: 'м/м'
+                });
+            }
+            if (typeof res.N_min === 'number' && typeof res.factualPlaces === 'number') {
+                deviations.push({
+                    name: 'Отклонение от минимума',
+                    formula: 'Δ = фактическое - min',
+                    value: res.factualPlaces - res.N_min,
+                    unit: 'м/м'
+                });
+            }
+            if (typeof res.N_max === 'number' && typeof res.factualPlaces === 'number') {
+                deviations.push({
+                    name: 'Отклонение от максимума',
+                    formula: 'Δ = фактическое - max',
+                    value: res.factualPlaces - res.N_max,
+                    unit: 'м/м'
+                });
+            }
+            return deviations;
+        }
     /**
      * Инициализация калькулятора с входными параметрами
      * @param {Object} inputData - объект с входными параметрами
@@ -21,9 +71,9 @@ class ParkingCalculator {
     }
 
     /**
-     * Получить коэффициент K2 и K3 по названию района
+     * Получить коэффициент K2 по названию района
      * @param {string} districtName - название района
-     * @returns {Object} {k2_inside, k2_outside, zone}
+     * @returns {Object} {k2_inside, k2_outside}
      */
     getDistrictCoefficients(districtName) {
         if (!window.parkingData || !window.parkingData.districts) {
@@ -39,22 +89,8 @@ class ParkingCalculator {
         
         return {
             k2_inside: district[0],
-            k2_outside: district[1],
-            zone: district[2]
+            k2_outside: district[1]
         };
-    }
-
-    /**
-     * Получить коэффициент K3 (урбанизации) по зоне
-     * @param {string} zone - зона (Т1, Т2, Т3, Т4)
-     * @returns {number} коэффициент K3
-     */
-    getK3(zone) {
-        if (!window.parkingData || !window.parkingData.k3_ratios) {
-            console.error("❌ parkingData.k3_ratios не доступен");
-            return 1;
-        }
-        return window.parkingData.k3_ratios[zone] || 1;
     }
 
     /**
@@ -67,6 +103,14 @@ class ParkingCalculator {
             console.error("❌ parkingData.ev_share не доступен");
             return 0;
         }
+        
+        const yearNum = Number(year);
+        
+        // Если год больше 2027, используем значение для 2027 (максимальное известное)
+        if (yearNum >= 2027) {
+            return window.parkingData.ev_share["2027"] || 0.15;
+        }
+        
         return window.parkingData.ev_share[String(year)] || 0;
     }
 
@@ -126,7 +170,7 @@ class ParkingCalculator {
         const record = {
             id: 'Np',
             name: 'Nп - Число мест постоянного размещения жилецов',
-            formula: 'Nп = (S_жилья / S1) × A × K1',
+            formula: 'Nп = (areaFlats / S1) × A × K1',
             unit: 'шт.',
             calculation: `(${S} / ${S1}) × ${A} × ${K1}`,
             result: Np_rounded,
@@ -218,7 +262,7 @@ class ParkingCalculator {
         const record = {
             id: 'Nv',
             name: 'Nв - Число мест приобъектной парковки (коммерческие помещения)',
-            formula: 'Nв = X / X2 × K1 × K2',
+            formula: 'Nв = areaNNP / X2 × K1 × K2',
             unit: 'шт.',
             calculation: `(${X} / ${X2}) × ${K1} × ${K2}`,
             result: Nv_rounded,
@@ -276,7 +320,7 @@ class ParkingCalculator {
         const record = {
             id: 'Nk_residential',
             name: 'Nк_жилье - Число мест остановки (жилое назначение)',
-            formula: 'Nк = ROUNDUP(S / S1)',
+            formula: 'Nк = ROUNDUP(areaFlats / S1)',
             unit: 'шт.',
             calculation: `ROUNDUP(${S} / ${S1})`,
             result: Nk_rounded,
@@ -313,7 +357,7 @@ class ParkingCalculator {
         const record = {
             id: 'Nk_commercial',
             name: 'Nк_коммерция - Число мест остановки (встроенно-пристроенные помещения)',
-            formula: 'Nк = IF(ROUNDUP(X/S1) > 4; 4; ROUNDUP(X/S1))',
+            formula: 'Nк = IF(ROUNDUP(areaNNP/S1) > 4; 4; ROUNDUP(areaNNP/S1))',
             notes: 'Не более 4 м/м (не далее 150м от входной группы)',
             unit: 'шт.',
             calculation: `ROUNDUP(${X} / ${S1}) = ${Nk_rounded} → максимум 4 → ${Nk_limited}`,
@@ -413,7 +457,27 @@ class ParkingCalculator {
         const Nv_min = this.results.Nv_minus_30 || this.results.Nv;
         const Nv_max = this.results.Nv_plus_30 || this.results.Nv;
         const No = this.results.No_total || 0;
-        const F_actual = this.input.factualPlaces || 0;
+        
+        // Сбор фактических мест из всех полей
+        let F_actual = 0;
+        const factFields = [
+            'fact_zu_mo', 'fact_zu_guest_mgn', 'fact_zu_priob_mgn',
+            'fact_uds_mo', 'fact_uds_guest', 'fact_uds_guest_mgn',
+            'fact_uds_priob', 'fact_uds_priob_mgn'
+        ];
+        
+        let hasDetailedFacts = false;
+        for (const field of factFields) {
+            if (this.input[field] !== undefined) {
+                F_actual += Number(this.input[field]) || 0;
+                hasDetailedFacts = true;
+            }
+        }
+        
+        // Если детальных полей нет, пробуем общее поле (обратная совместимость)
+        if (!hasDetailedFacts && this.input.factualPlaces !== undefined) {
+            F_actual = Number(this.input.factualPlaces) || 0;
+        }
         
         const N_required = this.results.Np + this.results.Ng + this.results.Nv + No - F_actual;
         const N_min = Math.max(0, Np_min + Ng_min + Nv_min + No - F_actual);
@@ -674,6 +738,14 @@ class ParkingCalculator {
             }
         }
         
+        // Добавим секцию с отклонениями
+        const deviations = this.getDeviations();
+        if (deviations.length) {
+            report += "ОТКЛОНЕНИЯ:\n";
+            for (const dev of deviations) {
+                report += `${dev.name}\nФормула: ${dev.formula}\nРезультат: ${dev.value} ${dev.unit}\n\n`;
+            }
+        }
         return report;
     }
 
@@ -758,7 +830,97 @@ class ParkingCalculator {
     }
 }
 
-// Экспортируем класс в глобальный контекст
+// Экспортируем функцию в глобальный контекст
 if (typeof window !== 'undefined') {
-    window.ParkingCalculator = ParkingCalculator;
+    window.ParkingCalculator = ParkingCalculator; // Для обратной совместимости
+    
+    /**
+     * Основная функция расчёта машиномест
+     * Принимает параметры в строгом порядке
+     */
+    window.calculateParking = function(
+        areaFlats = 0,
+        areaNNP = 0,
+        districtName = '',
+        ttkStatus = 'outside',
+        metroDistance = 0,
+        rnsYear = 2025,
+        fact_zu_mo = 0,
+        fact_zu_guest_mgn = 0,
+        fact_zu_priob_mgn = 0,
+        fact_uds_mo = 0,
+        fact_uds_guest = 0,
+        fact_uds_guest_mgn = 0,
+        fact_uds_priob = 0,
+        fact_uds_priob_mgn = 0
+    ) {
+        // 1. Расчёт коэффициента K1 (пешая доступность)
+        let k1 = 1.0;
+        if (window.parkingData && window.parkingData.infrastructure && window.parkingData.infrastructure.metro) {
+            // < 1200 -> 0.75
+            // 1200-2200 -> 0.9
+            // > 2200 -> 1.0
+            if (metroDistance < 1200) k1 = 0.75;
+            else if (metroDistance <= 2200) k1 = 0.9;
+            else k1 = 1.0;
+        }
+
+        // 2. Расчёт коэффициента K2 (район и ТТК)
+        let k2 = 1.0;
+        if (window.parkingData && window.parkingData.districts && districtName) {
+            const district = window.parkingData.districts[districtName];
+            if (district) {
+                // Формат: [К2_Внутри_ТТК, К2_Снаружи_ТТК]
+                if (ttkStatus === 'inside') {
+                    k2 = district[0];
+                } else {
+                    k2 = district[1];
+                }
+            } else {
+                console.warn(`Район "${districtName}" не найден, используется K2=1.0`);
+            }
+        }
+
+        // Формируем объект входных данных
+        const inputData = {
+            areaFlats: Number(areaFlats) || 0,
+            areaNNP: Number(areaNNP) || 0,
+            k1: k1,
+            k2: k2,
+            districtName: districtName,
+            ttkStatus: ttkStatus,
+            metroDistance: Number(metroDistance) || 0,
+            rnsYear: Number(rnsYear) || 2025,
+            fact_zu_mo: Number(fact_zu_mo) || 0,
+            fact_zu_guest_mgn: Number(fact_zu_guest_mgn) || 0,
+            fact_zu_priob_mgn: Number(fact_zu_priob_mgn) || 0,
+            fact_uds_mo: Number(fact_uds_mo) || 0,
+            fact_uds_guest: Number(fact_uds_guest) || 0,
+            fact_uds_guest_mgn: Number(fact_uds_guest_mgn) || 0,
+            fact_uds_priob: Number(fact_uds_priob) || 0,
+            fact_uds_priob_mgn: Number(fact_uds_priob_mgn) || 0
+        };
+
+        // Создаем экземпляр калькулятора и запускаем расчёт
+        const calculator = new ParkingCalculator(inputData);
+        const results = calculator.calculate();
+        
+        // Формируем расширенный ответ
+        return {
+            // 1. Список значений (результаты)
+            values: results,
+            
+            // 2. Массив наименование-значение (для таблиц)
+            tableData: calculator.getTableData(),
+            
+            // 3. Текстовый отчёт с формулами (f-строки)
+            report: calculator.getFormattedReport(),
+            
+            // Дополнительно: разбивка по типам
+            breakdowns: calculator.getAllBreakdownTables(),
+            
+            // Доступ к самому калькулятору если нужно
+            calculatorInstance: calculator
+        };
+    };
 }

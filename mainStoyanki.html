@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сравнение расчетов стоянок</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        @media (min-width: 1000px) {
+            .main-columns {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 2rem;
+            }
+        }
+        @media (max-width: 999px) {
+            .main-columns {
+                display: block;
+            }
+            .main-columns section {
+                margin-bottom: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Include header -->
+    <div id="header-container"></div>
+    <script>
+    // Применяем тему и язык сразу при загрузке, чтобы цвета и язык были как на welcome.html
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof applyTheme === 'function') applyTheme();
+        if (typeof applyLanguage === 'function') applyLanguage();
+    });
+    </script>
+    <main class="container centered" style="min-height: 100vh;">
+        <div class="card" style="max-width: 4000px; margin: 5rem auto;">
+            <article>
+                <header style="text-align: center;">
+                    <hgroup>
+                        <h1 data-i18n="mainstoyanki_title">Сравнение расчетов стоянок</h1>
+                        <p data-i18n="mainstoyanki_desc">Сравните разные методы расчета парковочных мест и благоустройства</p>
+                    </hgroup>
+                </header>
+                <div class="main-columns" style="margin-bottom:2.5rem;">
+                    <section>
+                        <h2>Ввод данных</h2>
+                        <form id="parkingForm">
+                            <fieldset>
+                                <legend><strong>1. Общие сведения об объекте</strong></legend>
+                                <label>Наименование объекта
+                                    <input type="text" id="objName" placeholder="Напр: жилой корпус 1">
+                                </label>
+                                <label>Поиск по адресу
+                                    <input type="text" id="objAddress" placeholder="Напр: ул. Маршала Катукова, 24">
+                                    <small>Район определится автоматически при вводе адреса</small>
+                                </label>
+                                <div id="fullAddressRow">
+                                    <small style="color: #666; display: block; margin-bottom: 2px;">Полный адрес объекта (получен по ГИС):</small>
+                                    <div id="fullAddressOutput">Ожидание ввода адреса...</div>
+                                </div>
+                                <div id="yandexLinkContainer"></div>
+                                <div class="grid">
+                                    <label for="districtSelect">Район Москвы
+                                        <select id="districtSelect" onchange="calculate()">
+                                            <option value="" disabled selected>Выберите район...</option>
+                                        </select>
+                                    </label>
+                                    <label for="ttkPos">Относительно ТТК
+                                        <select id="ttkPos" onchange="calculate()">
+                                            <!-- Здесь будут добавляться опции -->
+                                        </select>
+                                    </label>
+                                </div>
+                                <div class="grid">
+                                    <label for="metroAccess">Доступность метро/МЦК/МЦД
+                                        <select id="metroAccess" onchange="calculate()"></select>
+                                    </label>
+                                    <label for="rnsYear">Год РНС
+                                        <select id="rnsYear" onchange="calculate()">
+                                            <option value="" disabled selected>Выберите год...</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend><strong>2. Технико-экономические показатели (ТЭП)</strong></legend>
+                                <div class="grid">
+                                    <label>Площадь участка, кв.м
+                                        <input type="number" id="areaSite" value="0" step="0.01" oninput="calculate()">
+                                    </label>
+                                    <label>Площадь квартир (Sоб.кв.), кв.м
+                                        <input type="number" id="areaFlats" value="0" step="0.1" oninput="calculate()">
+                                    </label>
+                                </div>
+                                <div class="grid">
+                                    <label>Площадь НПКИ (Sнпки), кв.м
+                                        <input type="number" id="areaNPKI" value="0" step="0.1" oninput="calculate()">
+                                    </label>
+                                    <label>Площадь ННП, кв.м
+                                        <input type="number" id="areaNNP" value="0" step="0.1" oninput="calculate()">
+                                    </label>
+                                </div>
+                                <div class="grid">
+                                    <label>Уд. жил. обесп. (кв.м/чел)
+                                        <input type="number" id="specLiving" value="28" oninput="calculate()">
+                                    </label>
+                                    <label>Сотр./пос. НПКИ (кв.м/чел)
+                                        <input type="number" id="specStaff" value="20" oninput="calculate()">
+                                    </label>
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend><strong>3. Фактически размещенные стоянки (м/м)</strong></legend>
+                                <div class="grid">
+                                    <div>
+                                        <small><strong>На территории участка (ЗУ):</strong></small>
+                                        <input type="number" id="fact_zu_mo" placeholder="Места остановки" value="0" oninput="calculate()">
+                                        <input type="number" id="fact_zu_guest_mgn" placeholder="Гостевые МГН" value="0" oninput="calculate()">
+                                        <input type="number" id="fact_zu_priob_mgn" placeholder="Приобъектные МГН" value="0" oninput="calculate()">
+                                    </div>
+                                    <div>
+                                        <small><strong>На территории УДС:</strong></small>
+                                        <input type="number" id="fact_uds_mo" placeholder="Места остановок" value="0" oninput="calculate()">
+                                        <div class="grid">
+                                            <input type="number" id="fact_uds_guest" placeholder="Гост." value="0" oninput="calculate()">
+                                            <input type="number" id="fact_uds_guest_mgn" placeholder="Гост. МГН" value="0" oninput="calculate()">
+                                        </div>
+                                        <div class="grid">
+                                            <input type="number" id="fact_uds_priob" placeholder="Приоб." value="0" oninput="calculate()">
+                                            <input type="number" id="fact_uds_priob_mgn" placeholder="Приоб. МГН" value="0" oninput="calculate()">
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </section>
+                    <section>
+                        <h2>Расчет по РГНП</h2>
+                        <div id="rgnpReport">
+                            <p>Здесь будет отчет по расчету РГНП с формулами и результатами.</p>
+                        </div>
+                    </section>
+                    <section>
+                        <h2>Второй метод</h2>
+                        <div id="secondMethodReport">
+                            <p>Здесь появится второй метод расчета стоянок.</p>
+                        </div>
+                    </section>
+                </div>
+                <section class="blago-section" style="margin-top:2.5rem;">
+                    <h2>Расчеты благоустройства</h2>
+                    <div id="blagoReport">
+                        <p>Здесь появятся результаты расчетов благоустройства.</p>
+                    </div>
+                </section>
+                <a href="welcome.html" role="button" class="btn-control" style="margin-top:2.5rem; display:block; width:fit-content; margin-left:auto; margin-right:auto;">← <span data-i18n="back">На главную</span></a>
+            </article>
+        </div>
+    </main>
+    <div id="footer-container"></div>
+<script src="../rngp_2025_11_17/parkingData.js" defer></script>
+<script src="../rngp_2025_11_17/parkingEngine.js" defer></script>
+<script src="../rngp_2025_11_17/mainEngine.js" defer></script>
+<script src="../rngp_2025_11_17/blagoEngine.js" defer></script>
+<script>
+// Динамически подгружаем header и footer как в welcome.html
+fetch('header.html').then(response => response.text()).then(data => {
+    document.getElementById('header-container').innerHTML = data;
+    if (typeof initializeHeaderFooter === 'function') {
+        initializeHeaderFooter();
+    } else {
+        setTimeout(() => {
+            if (typeof applyTheme === 'function') applyTheme();
+            if (typeof applyLanguage === 'function') applyLanguage();
+        }, 100);
+    }
+}).catch(err => console.error('Error loading header:', err));
+
+fetch('footer.html').then(response => response.text()).then(data => {
+    document.getElementById('footer-container').innerHTML = data;
+    if (typeof applyLanguage === 'function') applyLanguage();
+}).catch(err => console.error('Error loading footer:', err));
+</script>
+</body>
+</html>

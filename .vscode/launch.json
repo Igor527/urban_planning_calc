@@ -11,6 +11,12 @@
             "name": "http://127.0.0.1:3000/rngp_2025_11_17/parking.html",
             "request": "launch",
             "url": "http://127.0.0.1:3000/rngp_2025_11_17/parking.html"
+        },
+        {
+            "type": "chrome",
+            "name": "http://127.0.0.1:3000/rngp_2025_11_17/test_run.html",
+            "request": "launch",
+            "url": "http://127.0.0.1:3000/rngp_2025_11_17/test_run.html"
         }
     ]
 }
