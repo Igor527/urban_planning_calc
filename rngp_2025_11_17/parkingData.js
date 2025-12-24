@@ -172,4 +172,9 @@ const parkingData = {
     }
 }; // <--- КОНЕЦ ФАЙЛА. ВСЁ ЧТО НИЖЕ — УДАЛИТЬ.
 
+// Присваиваем объект к window для совместимости со всеми способами загрузки скрипта
+if (typeof window !== 'undefined') {
+    window.parkingData = parkingData;
+}
+
 

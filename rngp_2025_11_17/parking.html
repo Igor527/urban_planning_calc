@@ -158,58 +158,10 @@
     </article>
 </main>
 
+<script src="parkingData.js" defer></script>
+<script src="parkingEngine.js" defer></script>
+
 <script>
-    // Загружаем parkingData.js с обработчиком загрузки
-    let parkingDataLoaded = false;
-    const parkingDataScript = document.createElement('script');
-    parkingDataScript.src = 'parkingData.js';
-    
-    parkingDataScript.onload = () => {
-        console.log("✅ parkingData.js загружен");
-        // Даем небольшую задержку для выполнения скрипта
-        setTimeout(() => {
-            if (parkingData && parkingData.districts) {
-                console.log("✅ parkingData доступен, загружаем parkingEngine");
-                parkingDataLoaded = true;
-                loadParkingEngine();
-            } else {
-                console.error("❌ parkingData загружен, но данные недоступны!");
-                console.log("parkingData:", parkingData);
-            }
-        }, 10);
-    };
-    
-    parkingDataScript.onerror = () => {
-        console.error("❌ Ошибка загрузки parkingData.js! Проверьте путь к файлу.");
-        console.error("Попытка загрузить из:", parkingDataScript.src);
-    };
-    
-    document.head.appendChild(parkingDataScript);
-    
-    // Таймаут на случай, если скрипт не загрузится
-    setTimeout(() => {
-        if (!parkingDataLoaded && (!parkingData || !parkingData.districts)) {
-            console.error("❌ Таймаут: parkingData не загрузился за 5 секунд");
-            console.log("Проверьте:");
-            console.log("1. Существует ли файл parkingData.js в той же папке");
-            console.log("2. Нет ли синтаксических ошибок в parkingData.js");
-            console.log("3. Правильно ли указан путь к файлу");
-        }
-    }, 5000);
-    
-    // Загружаем parkingEngine после загрузки parkingData
-    function loadParkingEngine() {
-        const parkingEngineScript = document.createElement('script');
-        parkingEngineScript.src = 'parkingEngine.js';
-        parkingEngineScript.onload = () => {
-            console.log("✅ parkingEngine.js загружен и инициализирован");
-        };
-        parkingEngineScript.onerror = () => {
-            console.error("❌ Ошибка загрузки parkingEngine.js!");
-        };
-        document.body.appendChild(parkingEngineScript);
-    }
-    
     // Функция расчета (будет вызываться при изменении полей)
     function calculate() {
         const district = document.getElementById('districtSelect')?.value;
