@@ -422,6 +422,7 @@ class ParkingCalculator {
             <h3>Расчёт стоянок по №945-ПП от 23.12.2015 с изменениями на 17 ноября 2025 года</h3>
             <table border="1" cellpadding="8">
                 <tr><th>Наименование показателя</th><th>Обозначение</th><th>Значение</th></tr>
+                ${this.input.objName ? `<tr><td>Наименование объекта</td><td>-</td><td>${this.input.objName}</td></tr>` : ''}
                 <tr><td>Тип объекта</td><td>-</td><td>Многоквартирный дом (2.1.1, 2.5, 2.6)</td></tr>
                 <tr><td>Год РНС</td><td>г.</td><td>${this.input.rnsYear}</td></tr>
                 <tr><td>Площадь участка проектирования</td><td>кв.м</td><td>${this.input.plotArea || '-'}</td></tr>

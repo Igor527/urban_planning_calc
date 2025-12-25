@@ -198,6 +198,19 @@
         .btn-open-bulk:hover {
             background-color: #0b7dda;
         }
+        .btn-copy-report {
+            background-color: #FF9800;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .btn-copy-report:hover {
+            background-color: #F57C00;
+        }
     </style>
 </head>
 <body>
@@ -205,10 +218,16 @@
         <h1>Калькулятор машиномест по №945-ПП</h1>
         
         <button class="btn-open-bulk" onclick="openBulkPasteModal()">📋 Вставить данные списком</button>
+        <button class="btn-copy-report" onclick="copyReportToClipboard()">📄 Скопировать отчёт</button>
 
         <div class="section">
             <h3>Общие параметры</h3>
             
+            <div class="form-group">
+                <label for="objName">Наименование объекта:</label>
+                <input type="text" id="objName" placeholder="Напр: ЖК 'Строгино'">
+            </div>
+
             <div class="form-group">
                 <label for="objAddress">Поиск по адресу:</label>
                 <input type="text" id="objAddress" placeholder="Напр: ул. Маршала Катукова, 24">
@@ -348,6 +367,7 @@
             <div class="bulk-paste-hint">
                 <h4>Правильный порядок вставки:</h4>
                 <ol>
+                    <li>Наименование объекта (например: ЖК 'Строгино')</li>
                     <li>Адрес (например: ул. Маршала Катукова, 24)</li>
                     <li>Район (например: Строгино)</li>
                     <li>Расположение относительно ТТК (Внутри ТТК / Снаружи ТТК)</li>
@@ -372,7 +392,8 @@
                 </small>
             </div>
             
-            <textarea id="bulkPasteArea" placeholder="ул. Маршала Катукова, 24
+            <textarea id="bulkPasteArea" placeholder="ЖК 'Строгино'
+ул. Маршала Катукова, 24
 Строгино
 Снаружи ТТК
 2300
@@ -454,6 +475,7 @@
             const rnsYear = parseInt(document.getElementById('rnsYear').value);
 
             const inputData = {
+                objName: document.getElementById('objName').value,
                 districtName: districtName,
                 ttkStatus: ttkStatus,
                 metroDistance: metroDistance,
@@ -479,9 +501,11 @@
             document.getElementById('results').innerHTML = report;
             
             // Форматированный вывод исходных данных
+            const objName = document.getElementById('objName').value;
             const objAddress = document.getElementById('objAddress').value;
             let formattedData = '';
             
+            if (objName) formattedData += `Объект: ${objName}\n`;
             if (objAddress) formattedData += `Адрес: ${objAddress}\n`;
             if (districtName) formattedData += `Район: ${districtName}\n`;
             if (ttkStatus) formattedData += `ТТК: ${ttkStatus === 'inside' ? 'Внутри' : 'Снаружи'}\n`;
@@ -547,6 +571,7 @@
 
             // Порядок полей согласно инструкции
             const fieldOrder = [
+                { id: 'objName', type: 'text', name: 'Наименование объекта' },
                 { id: 'objAddress', type: 'text', name: 'Адрес' },
                 { id: 'districtName', type: 'text', name: 'Район' },
                 { id: 'ttkStatus', type: 'select', name: 'ТТК' },
@@ -636,6 +661,38 @@
             } else {
                 alert('⚠️ Не удалось заполнить данные. Проверьте формат.');
             }
+        }
+
+        // Копирование отчёта в буфер обмена
+        function copyReportToClipboard() {
+            const resultsDiv = document.getElementById('results');
+            if (!resultsDiv || !resultsDiv.innerHTML.trim()) {
+                alert('⚠️ Сначала выполните расчёт!');
+                return;
+            }
+
+            // Создаём временный элемент для копирования
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = resultsDiv.innerHTML;
+            document.body.appendChild(tempDiv);
+
+            // Копируем содержимое
+            const range = document.createRange();
+            range.selectNodeContents(tempDiv);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                document.execCommand('copy');
+                alert('✅ Отчёт скопирован в буфер обмена!');
+            } catch (err) {
+                alert('❌ Ошибка копирования: ' + err);
+            }
+
+            // Очищаем
+            selection.removeAllRanges();
+            document.body.removeChild(tempDiv);
         }
     </script>
 </body>
