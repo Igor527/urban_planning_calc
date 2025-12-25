@@ -251,39 +251,30 @@ class ParkingCalculator {
 
     calculateTotalVariations() {
         const F_actual = (
-            this.input.fact_zu_mo +
-            this.input.fact_zu_guest_mgn +
-            this.input.fact_zu_priob_mgn +
-            this.input.fact_uds_mo +
-            this.input.fact_uds_guest +
-            this.input.fact_uds_guest_mgn +
-            this.input.fact_uds_priob +
-            this.input.fact_uds_priob_mgn
+            (Number(this.input.fact_zu_mo) || 0) +
+            (Number(this.input.fact_zu_guest_mgn) || 0) +
+            (Number(this.input.fact_zu_priob_mgn) || 0) +
+            (Number(this.input.fact_uds_mo) || 0) +
+            (Number(this.input.fact_uds_guest) || 0) +
+            (Number(this.input.fact_uds_guest_mgn) || 0) +
+            (Number(this.input.fact_uds_priob) || 0) +
+            (Number(this.input.fact_uds_priob_mgn) || 0)
         );
 
-        this.results.N_required = (
-            this.results.Np +
-            this.results.Ng +
-            this.results.Nv +
-            this.results.No_total -
-            F_actual
-        );
+        // Сохраняем фактически размещенные места для отчета
+        this.results.F_actual = F_actual;
 
-        this.results.N_min = Math.max(0, (
-            this.results.Np_minus_10 +
-            this.results.Ng_minus_10 +
-            this.results.Nv_minus_30 +
-            this.results.No_total -
-            F_actual
-        ));
+        const N_before = (this.results.Np + this.results.Ng + this.results.Nv + this.results.No_total);
+        const N_min_before = (this.results.Np_minus_10 + this.results.Ng_minus_10 + this.results.Nv_minus_30 + this.results.No_total);
+        const N_max_before = (this.results.Np_plus_10 + this.results.Ng_plus_10 + this.results.Nv_plus_30 + this.results.No_total);
 
-        this.results.N_max = (
-            this.results.Np_plus_10 +
-            this.results.Ng_plus_10 +
-            this.results.Nv_plus_30 +
-            this.results.No_total -
-            F_actual
-        );
+        this.results.N_before = N_before;
+        this.results.N_min_before = N_min_before;
+        this.results.N_max_before = N_max_before;
+
+        this.results.N_required = Math.max(0, N_before - F_actual);
+        this.results.N_min = Math.max(0, N_min_before - F_actual);
+        this.results.N_max = Math.max(0, N_max_before - F_actual);
 
         const ev_share = this.getEVShare(this.input.rnsYear);
         // Электромобили считаются от каждого вида отдельно
@@ -300,26 +291,68 @@ class ParkingCalculator {
 
     calculateBreakdown() {
         const ev_share = this.getEVShare(this.input.rnsYear);
-        const Np = this.results.Np || 0;
-        const Ng = this.results.Ng || 0;
-        const Nv = this.results.Nv || 0;
+        const computeVariant = (np, ng, nv) => {
+            const safeNp = np || 0;
+            const safeNg = ng || 0;
+            const safeNv = nv || 0;
 
-        const P2 = Math.ceil(Np * ev_share);
-        const P1 = Np - P2;
-        const G2 = Math.ceil(Ng * ev_share);
-        const G1 = Ng - G2;
-        const V2 = Math.ceil(Nv * ev_share);
-        const V1 = Nv - V2;
+            const P2 = Math.ceil(safeNp * ev_share);
+            const P1 = Math.max(0, safeNp - P2);
 
-        const Ng_mgn = this.calculateMGNPlaces(Ng);
-        const Nv_mgn = this.calculateMGNPlaces(Nv);
+            const G2 = Math.ceil(safeNg * ev_share);
+            const G3 = this.calculateMGNPlaces(safeNg).total;
+            const G1 = Math.max(0, safeNg - G2 - G3);
 
-        this.results.breakdown = {
-            П1: P1, "П(эм)": P2,
-            Г1: G1, "Г(эм)": G2, "Г(мгн)": Ng_mgn.total,
-            В1: V1, "В(эм)": V2, "В(мгн)": Nv_mgn.total,
-            МО: this.results.No_total
+            const V2 = Math.ceil(safeNv * ev_share);
+            const V3 = this.calculateMGNPlaces(safeNv).total;
+            const V1 = Math.max(0, safeNv - V2 - V3);
+
+            const MO = this.results.No_total || 0;
+
+            const total = P1 + P2 + G1 + G2 + G3 + V1 + V2 + V3 + MO;
+
+            return { P1, P2, G1, G2, G3, V1, V2, V3, MO, total };
         };
+
+        const applyFacts = (breakdown) => {
+            const b = { ...breakdown };
+            const facts = {
+                mo: (Number(this.input.fact_zu_mo) || 0) + (Number(this.input.fact_uds_mo) || 0),
+                guest: Number(this.input.fact_uds_guest) || 0,
+                guest_mgn: (Number(this.input.fact_zu_guest_mgn) || 0) + (Number(this.input.fact_uds_guest_mgn) || 0),
+                priob: Number(this.input.fact_uds_priob) || 0,
+                priob_mgn: (Number(this.input.fact_zu_priob_mgn) || 0) + (Number(this.input.fact_uds_priob_mgn) || 0)
+            };
+
+            const reduceField = (field, amount) => {
+                const available = b[field] || 0;
+                const taken = Math.min(available, amount);
+                b[field] = Math.max(0, available - taken);
+                return amount - taken;
+            };
+
+            let remaining;
+            remaining = reduceField('MO', facts.mo);
+            remaining = reduceField('G3', facts.guest_mgn);
+            remaining = reduceField('G1', facts.guest);
+            remaining = reduceField('V3', facts.priob_mgn);
+            remaining = reduceField('V1', facts.priob);
+
+            b.total_after_fact = b.P1 + b.P2 + b.G1 + b.G2 + b.G3 + b.V1 + b.V2 + b.V3 + b.MO;
+            return b;
+        };
+
+        const base = computeVariant(this.results.Np, this.results.Ng, this.results.Nv);
+        const min = computeVariant(this.results.Np_minus_10, this.results.Ng_minus_10, this.results.Nv_minus_30);
+        const max = computeVariant(this.results.Np_plus_10, this.results.Ng_plus_10, this.results.Nv_plus_30);
+
+        this.results.breakdown_base_before = base;
+        this.results.breakdown_min_before = min;
+        this.results.breakdown_max_before = max;
+
+        this.results.breakdown_base_after = applyFacts({ ...base });
+        this.results.breakdown_min_after = applyFacts({ ...min });
+        this.results.breakdown_max_after = applyFacts({ ...max });
     }
 
     calculateParkingAreaRequired() {
@@ -361,6 +394,29 @@ class ParkingCalculator {
         const k2 = this.input.k2;
         const ev_share = this.getEVShare(this.input.rnsYear);
         const sqmPerPlace = this.input.sqmPerPlace || 32;
+        const F_actual = this.results.F_actual || 0;
+
+        const renderBreakdownTable = (title, before, after, targetTotal) => {
+            const b0 = before || { P1: 0, P2: 0, G1: 0, G2: 0, G3: 0, V1: 0, V2: 0, V3: 0, MO: 0, total: 0 };
+            const b = after || b0;
+            return `
+                <h5>${title}</h5>
+                <table border="1" cellpadding="8">
+                    <tr><th>Позиция</th><th>Описание</th><th>До учета фактически размещенных на участке или УДС - F, шт.</th><th>С учетом F, шт.</th></tr>
+                    <tr><td>П1</td><td>Постоянные (без учета электромобилей) — не далее 1200 м</td><td>${b0.P1}</td><td>${b.P1}</td></tr>
+                    <tr><td>П2</td><td>Постоянные (электромобилей) — не далее 1200 м</td><td>${b0.P2}</td><td>${b.P2}</td></tr>
+                    <tr><td>Г1</td><td>Гостевые (без учета МГН и электромобилей) — не далее 200 м</td><td>${b0.G1}</td><td>${b.G1}</td></tr>
+                    <tr><td>Г2</td><td>Гостевые (электромобилей) — не далее 200 м</td><td>${b0.G2}</td><td>${b.G2}</td></tr>
+                    <tr><td>Г3</td><td>Гостевые (МГН) — не далее 100 м по СП59</td><td>${b0.G3}</td><td>${b.G3}</td></tr>
+                    <tr><td>В1</td><td>Приобъектные (без учета МГН и электромобилей) — не далее 200 м</td><td>${b0.V1}</td><td>${b.V1}</td></tr>
+                    <tr><td>В2</td><td>Приобъектные (электромобилей) — не далее 200 м</td><td>${b0.V2}</td><td>${b.V2}</td></tr>
+                    <tr><td>В3</td><td>Приобъектные (МГН) — не далее 50 м по СП59</td><td>${b0.V3}</td><td>${b.V3}</td></tr>
+                    <tr><td>МО</td><td>Места остановок — не далее 150 м</td><td>${b0.MO}</td><td>${b.MO}</td></tr>
+                    <tr><td colspan="2"><strong>Итого (без учета F)</strong></td><td><strong>${b0.total}</strong></td><td><strong>${b.total_after_fact || b0.total}</strong></td></tr>
+                    <tr><td colspan="2"><strong>Требуется с учетом F=${F_actual}</strong></td><td></td><td><strong>${targetTotal}</strong></td></tr>
+                </table>
+            `;
+        };
 
         let report = `
             <h3>Расчёт стоянок по №945-ПП от 23.12.2015 с изменениями на 17 ноября 2025 года</h3>
@@ -420,11 +476,38 @@ class ParkingCalculator {
             <table border="1" cellpadding="8">
                 <tr><th>№</th><th>Наименование показателя</th><th>Обозначение</th><th>Значение</th></tr>
                 <tr><td>1.</td><td>% электромобилей (по году РНС)</td><td>%</td><td>${(ev_share * 100).toFixed(0)}</td></tr>
-                <tr><td>2.</td><td>Всего требуется разместить стоянок и остановок (из которых ${(ev_share * 100).toFixed(0)}% - машиноместа с зарядными станциями для электромобилей, включая инфраструктуру для установки зарядного устройства)</td><td>N</td><td>${this.results.N_total} - всего; (${this.results.N_ev} - для электромобилей)</td></tr>
-                <tr><td>3.</td><td>Всего требуется разместить стоянок и остановок с учётом отклонений в меньшую сторону без прохождения ГЗК (из которых ${(ev_share * 100).toFixed(0)}% - машиноместа с зарядными станциями для электромобилей, включая инфраструктуру для установки зарядного устройства)</td><td>N (допустимое отклонение)</td><td>${this.results.N_min} - всего; (${this.results.N_ev_min} - для электромобилей)</td></tr>
-                <tr><td>4.</td><td>Всего требуется разместить стоянок и остановок с учётом отклонений в большую сторону без прохождения ГЗК (из которых ${(ev_share * 100).toFixed(0)}% - машиноместа с зарядными станциями для электромобилей, включая инфраструктуру для установки зарядного устройства)</td><td>N (допустимое отклонение)</td><td>${this.results.N_max} - всего; (${this.results.N_ev_max} - для электромобилей)</td></tr>
+                <tr><td>2.</td><td>Всего требуется разместить стоянок и остановок (из которых ${(ev_share * 100).toFixed(0)}% - машиноместа с зарядными станциями для электромобилей, включая инфраструктуру для установки зарядного устройства)</td><td>N</td><td>${this.results.N_before || this.results.N_total} - всего; (${this.results.N_ev} - для электромобилей)</td></tr>
+                <tr><td>3.</td><td>Всего требуется разместить стоянок и остановок с учётом отклонений в меньшую сторону без прохождения ГЗК (из которых ${(ev_share * 100).toFixed(0)}% - машиноместа с зарядными станциями для электромобилей, включая инфраструктуру для установки зарядного устройства)</td><td>N (допустимое отклонение)</td><td>${this.results.N_min_before} - всего; (${this.results.N_ev_min} - для электромобилей)</td></tr>
+                <tr><td>4.</td><td>Всего требуется разместить стоянок и остановок с учётом отклонений в большую сторону без прохождения ГЗК (из которых ${(ev_share * 100).toFixed(0)}% - машиноместа с зарядными станциями для электромобилей, включая инфраструктуру для установки зарядного устройства)</td><td>N (допустимое отклонение)</td><td>${this.results.N_max_before} - всего; (${this.results.N_ev_max} - для электромобилей)</td></tr>
                 <tr><td>5.</td><td>Площадь подземной автостоянки при обеспеченности ${sqmPerPlace} кв.м/м.м (минимальная площадь, требуется подтверждение АР)</td><td>S_стоянки</td><td>${this.results.parking_area_required}</td></tr>
                 <tr><td>6.</td><td>То же, в два уровня</td><td>S_стоянки_2ур.</td><td>${this.results.parking_area_2level}</td></tr>
+            </table>
+
+            <h4>Требуется разместить в подземной / многоуровневой / огороженной стоянке (с учётом фактически размещённых F=${this.results.F_actual || 0} шт.)</h4>
+            <table border="1" cellpadding="8">
+                <tr><th>Вариант</th><th>Обозначение</th><th>Всего, шт.</th><th>Из них ЭМ, шт.</th></tr>
+                <tr><td>Основной расчёт</td><td>N</td><td>${this.results.N_required}</td><td>${this.results.N_ev_required}</td></tr>
+                <tr><td>Допустимое отклонение в меньшую сторону</td><td>N (мин.)</td><td>${this.results.N_min}</td><td>${this.results.N_ev_min}</td></tr>
+                <tr><td>Допустимое отклонение в большую сторону</td><td>N (макс.)</td><td>${this.results.N_max}</td><td>${this.results.N_ev_max}</td></tr>
+            </table>
+
+            <h4>Детализация по категориям (подземная / многоуровневая / огороженная)</h4>
+            ${renderBreakdownTable('8. Основной расчёт: N = Nп + Nг + Nв + Nо - F', this.results.breakdown_base_before, this.results.breakdown_base_after, this.results.N_required)}
+            ${renderBreakdownTable('9. Допустимое отклонение в меньшую сторону: N = (Nп-10%) + (Nг-10%) + (Nв-30%) + Nо - F', this.results.breakdown_min_before, this.results.breakdown_min_after, this.results.N_min)}
+            ${renderBreakdownTable('10. Допустимое отклонение в большую сторону: N = (Nп+10%) + (Nг+10%) + (Nв+30%) + Nо - F', this.results.breakdown_max_before, this.results.breakdown_max_after, this.results.N_max)}
+
+            <h4>Фактически размещено на участке и УДС</h4>
+            <table border="1" cellpadding="8">
+                <tr><th>Категория</th><th>Обозначение</th><th>Количество, шт.</th></tr>
+                <tr><td>На территории ЗУ — места остановки</td><td>Fз(о)</td><td>${this.input.fact_zu_mo || 0}</td></tr>
+                <tr><td>На территории ЗУ — гостевые МГН</td><td>Fз(г,мгн)</td><td>${this.input.fact_zu_guest_mgn || 0}</td></tr>
+                <tr><td>На территории ЗУ — приобъектные МГН</td><td>Fз(в,мгн)</td><td>${this.input.fact_zu_priob_mgn || 0}</td></tr>
+                <tr><td>На территории УДС — места остановки</td><td>Fу(о)</td><td>${this.input.fact_uds_mo || 0}</td></tr>
+                <tr><td>На территории УДС — гостевые (без МГН)</td><td>Fу(г)</td><td>${this.input.fact_uds_guest || 0}</td></tr>
+                <tr><td>На территории УДС — гостевые МГН</td><td>Fу(г,мгн)</td><td>${this.input.fact_uds_guest_mgn || 0}</td></tr>
+                <tr><td>На территории УДС — приобъектные (без МГН)</td><td>Fу(в)</td><td>${this.input.fact_uds_priob || 0}</td></tr>
+                <tr><td>На территории УДС — приобъектные МГН</td><td>Fу(в,мгн)</td><td>${this.input.fact_uds_priob_mgn || 0}</td></tr>
+                <tr><td colspan="2"><strong>Всего фактически размещено (F)</strong></td><td><strong>${this.results.F_actual || 0}</strong></td></tr>
             </table>
 
             <h4>Расчет числа мест остановки для школы и детского сада:</h4>
