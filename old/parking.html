@@ -186,7 +186,7 @@
                 specLiving: parseFloat(document.getElementById('specLiving').value) || 28,
                 specStaff: parseFloat(document.getElementById('specStaff').value) || 20,
                 factualPlaces: parseFloat(document.getElementById('fact_zu_mo').value) || 0,
-                rnsYear: parseInt(document.getElementById(' || 0').value) || 2025
+                rnsYear: parseInt(document.getElementById('rnsYear').value) || 2025
             };
 
             const calculator = new ParkingCalculator(inputData);
@@ -205,7 +205,7 @@
                 {label:'Площадь ННП', key:'areaNNP', value:inputData.areaNNP},
                 {label:'Площадь НПКИ', key:'areaNPKI', value:inputData.areaNPKI},
                 {label:'Район', key:'district', value:document.getElementById('districtSelect')?.value},
-                {label:'Коэффициент К1', key:'k1', value:inputData.k1,
+                {label:'Коэффициент К1', key:'k1', value:inputData.k1},
                 {label:'Коэффициент К2', key:'k2', value:inputData.k2}
             ];
             for (const row of inputMap) {

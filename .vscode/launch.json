@@ -17,6 +17,18 @@
             "name": "http://127.0.0.1:3000/rngp_2025_11_17/test_run.html",
             "request": "launch",
             "url": "http://127.0.0.1:3000/rngp_2025_11_17/test_run.html"
+        },
+        {
+            "type": "chrome",
+            "name": "http://127.0.0.1:3000/rngp_2025_11_17_v.1/Raschet_RNGP_2025_11_17_v.2/parkingRNGP_MSK_2026_11_17_Results.html",
+            "request": "launch",
+            "url": "http://127.0.0.1:3000/rngp_2025_11_17_v.1/Raschet_RNGP_2025_11_17_v.2/parkingRNGP_MSK_2026_11_17_Results.html"
+        },
+        {
+            "type": "chrome",
+            "name": "http://127.0.0.1:3000/rngp_2025_11_17_v.1/parkingRNGP_MSK_2026_11_17_Results.html",
+            "request": "launch",
+            "url": "http://127.0.0.1:3000/rngp_2025_11_17_v.1/parkingRNGP_MSK_2026_11_17_Results.html"
         }
     ]
 }
