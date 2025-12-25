@@ -17,46 +17,53 @@
             console.log("🚀 Запуск теста...");
 
             // Тестовые данные
-            const areaFlats = 15000;      // 15 000 кв.м жилья
-            const areaNNP = 1200;         // 1 200 кв.м коммерции
-            const district = "Академический"; // Район
+            const areaFlats = 51539.3;      // 15 000 кв.м жилья
+            const areaNNP = 4048;         // 1 200 кв.м коммерции
+            const district = "Строгино"; // Район
             const ttk = "outside";        // Снаружи ТТК
-            const metroDist = 800;        // 800 метров до метро (должен быть K1=0.75)
-            const year = 2028;            // 2028 год (должен быть % ЭМ = 15%)
+            const metroDist = 2600;        // 2600 метров до метро
+            const year = 2026;            // 2026 год (должен быть % ЭМ = 10%)
             
             // Фактические места (для примера заполним пару полей)
-            const f_zu_mo = 5;
-            const f_uds_guest = 10;
+            const f_zu_mo = 0;
+            const f_uds_guest = 6;
 
             // ВЫЗОВ ФУНКЦИИ
             // Порядок аргументов:
-            // areaFlats, areaNNP, districtName, ttkStatus, metroDistance, rnsYear,
+            // areaFlats, areaNNP, areaSchool, areaPreschool, districtName, ttkStatus, metroDistance, rnsYear,
             // fact_zu_mo, fact_zu_guest_mgn, fact_zu_priob_mgn, 
             // fact_uds_mo, fact_uds_guest, fact_uds_guest_mgn, fact_uds_priob, fact_uds_priob_mgn
             
             const result = calculateParking(
                 areaFlats, 
                 areaNNP, 
+                0, // areaSchool
+                0, // areaPreschool
                 district, 
                 ttk, 
                 metroDist, 
                 year,
-                f_zu_mo, 0, 0, 0, f_uds_guest, 0, 0, 0
+                f_zu_mo, 0, 1, 7, f_uds_guest, 3, 4, 3
             );
 
-            // Вывод результатов
-            console.log("📊 Результат (объект):", result);
-            
-            console.log("\n📋 ТЕКСТОВЫЙ ОТЧЁТ:");
-            console.log(result.report);
+            // Ensure the result object is valid before proceeding
+            if (result && typeof result === 'object') {
+                // Вывод результатов
+                console.log("📊 Результат (объект):", result);
+                
+                console.log("\n📋 ТЕКСТОВЫЙ ОТЧЁТ:");
+                console.log(result.report);
 
-            console.log("\n📉 ТАБЛИЦА РАЗБИВКИ (Требуемый вариант):");
-            console.table(result.breakdowns.required);
-            
-            // Проверка значений
-            console.log("\n🔍 ПРОВЕРКА:");
-            console.log(`Год: ${year}, Доля ЭМ должна быть 0.15. Расчётная доля: ${(result.values.N_ev / result.values.N_total).toFixed(2)}`);
-            console.log(`Метро: ${metroDist}м. K1 должен быть 0.75.`);
+                console.log("\n📉 ТАБЛИЦА РАЗБИВКИ (Требуемый вариант):");
+                console.table(result.breakdowns.required);
+
+                // Проверка значений
+                console.log("\n🔍 ПРОВЕРКА:");
+                console.log(`Год: ${year}, Доля ЭМ должна быть 0.15. Расчётная доля: ${(result.values.N_ev / result.values.N_total).toFixed(2)}`);
+                console.log(`Метро: ${metroDist}м. K1 должен быть 0.75.`);
+            } else {
+                console.error("❌ Ошибка: Функция calculateParking вернула некорректный результат.");
+            }
         };
     </script>
 </body>

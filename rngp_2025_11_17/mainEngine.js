@@ -9,6 +9,8 @@
  * ОЖИДАЕМЫЕ ВХОДНЫЕ ПАРАМЕТРЫ (inputData):
  * - areaFlats          : Суммарная площадь квартир
  * - areaNNP            : Нежилая наземная площадь
+ * - areaSchool         : Площадь общеобразовательной организации (школы)
+ * - areaPreschool      : Площадь дошкольной организации (детского сада)
  * - districtName       : Название района (для определения K2)
  * - ttkStatus          : Расположение относительно ТТК ('inside'/'outside')
  * - metroDistance      : Расстояние до станции метро (м) (для определения K1)
@@ -136,8 +138,10 @@ class ParkingCalculator {
             enlarged = 14 + Math.ceil((totalPlaces - 500) * 0.01);
         }
         
-        // Всего МГН = 10% + увеличенные
+        // Всего МГН = 10%
         const total_mgn = Math.ceil(totalPlaces * 0.1);
+        
+        // Обычные МГН = Всего МГН - Увеличенные
         const regular_mgn = total_mgn - enlarged;
         
         return {
@@ -170,7 +174,7 @@ class ParkingCalculator {
         const record = {
             id: 'Np',
             name: 'Nп - Число мест постоянного размещения жилецов',
-            formula: 'Nп = (areaFlats / S1) × A × K1',
+            formula: 'Nп = (S / S1) × A × K1',
             unit: 'шт.',
             calculation: `(${S} / ${S1}) × ${A} × ${K1}`,
             result: Np_rounded,
@@ -191,7 +195,7 @@ class ParkingCalculator {
         const Np = this.results.Np;
         
         const Np_minus = Math.ceil(Np * 0.9);
-        const Np_plus = Math.ceil(Np * 1.1);
+        const Np_plus = Math.floor(Np * 1.1);
         
         this.results.Np_minus_10 = Np_minus;
         this.results.Np_plus_10 = Np_plus;
@@ -238,6 +242,30 @@ class ParkingCalculator {
     }
 
     /**
+     * Расчёт Nг с отклонениями (±10%)
+     */
+    calculateNgVariations() {
+        const Ng = this.results.Ng;
+        
+        const Ng_minus = Math.ceil(Ng * 0.9);
+        const Ng_plus = Math.floor(Ng * 1.1);
+        
+        this.results.Ng_minus_10 = Ng_minus;
+        this.results.Ng_plus_10 = Ng_plus;
+        
+        this.calculations.push({
+            id: 'Ng_variations',
+            name: 'Nг с допустимыми отклонениями ±10%',
+            unit: 'шт.',
+            min_value: Ng_minus,
+            max_value: Ng_plus,
+            calculation: `Nг_min = ${Ng} × 90% = ${Ng_minus}; Nг_max = ${Ng} × 110% = ${Ng_plus}`
+        });
+        
+        return { Ng_minus, Ng_plus };
+    }
+
+    /**
      * Расчёт Nв (места приобъектной парковки для коммерческих помещений)
      * Nв = X / X2 × K1 × K2
      * где:
@@ -262,7 +290,7 @@ class ParkingCalculator {
         const record = {
             id: 'Nv',
             name: 'Nв - Число мест приобъектной парковки (коммерческие помещения)',
-            formula: 'Nв = areaNNP / X2 × K1 × K2',
+            formula: 'Nв = (X / X2) × K1 × K2',
             unit: 'шт.',
             calculation: `(${X} / ${X2}) × ${K1} × ${K2}`,
             result: Nv_rounded,
@@ -283,7 +311,7 @@ class ParkingCalculator {
         const Nv = this.results.Nv;
         
         const Nv_minus = Math.ceil(Nv * 0.7);
-        const Nv_plus = Math.ceil(Nv * 1.3);
+        const Nv_plus = Math.floor(Nv * 1.3);
         
         this.results.Nv_minus_30 = Nv_minus;
         this.results.Nv_plus_30 = Nv_plus;
@@ -320,7 +348,7 @@ class ParkingCalculator {
         const record = {
             id: 'Nk_residential',
             name: 'Nк_жилье - Число мест остановки (жилое назначение)',
-            formula: 'Nк = ROUNDUP(areaFlats / S1)',
+            formula: 'Nк = (S / S1)',
             unit: 'шт.',
             calculation: `ROUNDUP(${S} / ${S1})`,
             result: Nk_rounded,
@@ -336,7 +364,7 @@ class ParkingCalculator {
 
     /**
      * Расчёт Nк (места остановки для коммерческих помещений)
-     * Nк_коммерция = IF(ROUNDUP(X/S1) > 4; 4; ROUNDUP(X/S1))
+     * Nк_коммерция = IF(ROUNDUP(S/S1) > 4; 4; ROUNDUP(X/S1))
      * Ограничение: не более 4 м/м (не далее 150м от входной группы)
      * Формула Excel: =IF(ROUNDUP(D11/D40;0)>4;4;ROUNDUP(D11/D40;0))
      */
@@ -357,7 +385,7 @@ class ParkingCalculator {
         const record = {
             id: 'Nk_commercial',
             name: 'Nк_коммерция - Число мест остановки (встроенно-пристроенные помещения)',
-            formula: 'Nк = IF(ROUNDUP(areaNNP/S1) > 4; 4; ROUNDUP(areaNNP/S1))',
+            formula: 'Nк = ЕСЛИ (S/S1), но не менее 1 и не более 4',
             notes: 'Не более 4 м/м (не далее 150м от входной группы)',
             unit: 'шт.',
             calculation: `ROUNDUP(${X} / ${S1}) = ${Nk_rounded} → максимум 4 → ${Nk_limited}`,
@@ -380,15 +408,18 @@ class ParkingCalculator {
     calculateNo_total() {
         const Nk_res = this.results.Nk_residential || 0;
         const Nk_com = this.results.Nk_commercial || 0;
-        const No_total = Nk_res + Nk_com;
+        const Nk_school = this.results.Nk_school || 0;
+        const Nk_preschool = this.results.Nk_preschool || 0;
+        
+        const No_total = Nk_res + Nk_com + Nk_school + Nk_preschool;
         
         this.results.No_total = No_total;
         this.calculations.push({
             id: 'No_total',
             name: 'Nо (всего) - Всего мест остановки',
-            formula: 'Nо = Nк_жилье + Nк_коммерция',
+            formula: 'Nо = Nк_жилье + Nк_коммерция + Nк_школа + Nк_детсад',
             unit: 'шт.',
-            calculation: `${Nk_res} + ${Nk_com}`,
+            calculation: `${Nk_res} + ${Nk_com} + ${Nk_school} + ${Nk_preschool}`,
             result: No_total
         });
         
@@ -452,8 +483,11 @@ class ParkingCalculator {
     calculateTotalVariations() {
         const Np_min = this.results.Np_minus_10 || this.results.Np;
         const Np_max = this.results.Np_plus_10 || this.results.Np;
-        const Ng_min = Math.ceil(Np_min * 0.1);
-        const Ng_max = Math.ceil(Np_max * 0.1);
+        
+        // Используем рассчитанные вариации Ng, а не пересчитываем от Np_min
+        const Ng_min = this.results.Ng_minus_10 || this.results.Ng;
+        const Ng_max = this.results.Ng_plus_10 || this.results.Ng;
+        
         const Nv_min = this.results.Nv_minus_30 || this.results.Nv;
         const Nv_max = this.results.Nv_plus_30 || this.results.Nv;
         const No = this.results.No_total || 0;
@@ -537,11 +571,11 @@ class ParkingCalculator {
         
         if (variant === 'min') {
             Np = this.results.Np_minus_10 || this.results.Np;
-            Ng = Math.ceil(Np * 0.1);
+            Ng = this.results.Ng_minus_10 || this.results.Ng;
             Nv = this.results.Nv_minus_30 || this.results.Nv;
         } else if (variant === 'max') {
             Np = this.results.Np_plus_10 || this.results.Np;
-            Ng = Math.ceil(Np * 0.1);
+            Ng = this.results.Ng_plus_10 || this.results.Ng;
             Nv = this.results.Nv_plus_30 || this.results.Nv;
         } else {
             Np = this.results.Np;
@@ -561,13 +595,16 @@ class ParkingCalculator {
         
         // МГН для гостевых - вычисляем через формулу
         const Ng_mgn_data = this.calculateMGNPlaces(Ng);
-        const G3 = Ng_mgn_data.enlarged;
+        const G3_total = Ng_mgn_data.total;
+        const G3_enlarged = Ng_mgn_data.enlarged;
+        
         const G2_base = G_with_em; // ЭМ
-        const G1_base = G_without_em - Ng_mgn_data.regular; // БЕЗ МГН и ЭМ
+        // Г1 = Всего - МГН(всего) - ЭМ
+        const G1_base = Ng - G3_total - G2_base; 
         
         // Убедимся что разбивка суммируется в Ng (используем остаток для точности)
         const G2 = G2_base;
-        const G1 = Ng - G3 - G2;  // Остаток
+        const G1 = Math.max(0, Ng - G3_total - G2);  // Остаток
         
         // Разбивка приобъектных (В1, В2, В3)
         const V_with_em = Math.ceil(Nv * ev_share);
@@ -575,13 +612,16 @@ class ParkingCalculator {
         
         // МГН для приобъектных - вычисляем через формулу
         const Nv_mgn_data = this.calculateMGNPlaces(Nv);
-        const V3 = Nv_mgn_data.enlarged;
+        const V3_total = Nv_mgn_data.total;
+        const V3_enlarged = Nv_mgn_data.enlarged;
+        
         const V2_base = V_with_em; // ЭМ
-        const V1_base = V_without_em - Nv_mgn_data.regular; // БЕЗ МГН и ЭМ
+        // В1 = Всего - МГН(всего) - ЭМ
+        const V1_base = Nv - V3_total - V2_base; 
         
         // Убедимся что разбивка суммируется в Nv (используем остаток для точности)
         const V2 = V2_base;
-        const V1 = Nv - V3 - V2;  // Остаток
+        const V1 = Math.max(0, Nv - V3_total - V2);  // Остаток
         
         // Места остановки
         const MO = No;
@@ -589,20 +629,22 @@ class ParkingCalculator {
         const breakdown = {
             variant,
             П1: { name: 'П1 - Постоянные (без ЭМ)', value: P1 },
-            П2: { name: 'П2 - Постоянные (ЭМ)', value: P2 },
+            'П(эм)': { name: 'П(эм) - Постоянные (ЭМ)', value: P2 },
             Г1: { name: 'Г1 - Гостевые (без МГН и ЭМ)', value: G1 },
-            Г2: { name: 'Г2 - Гостевые (ЭМ)', value: G2 },
-            Г3: { name: 'Г3 - Гостевые (МГН)', value: G3 },
+            'Г(эм)': { name: 'Г(эм) - Гостевые (ЭМ)', value: G2 },
+            'Г(мгн всего)': { name: 'Гостевые * 10%)', value: G3_total },
+            'Г(мгн увел)': { name: 'в т.ч. Г(мгн увел)', value: G3_enlarged },
             В1: { name: 'В1 - Приобъектные (без МГН и ЭМ)', value: V1 },
-            В2: { name: 'В2 - Приобъектные (ЭМ)', value: V2 },
-            В3: { name: 'В3 - Приобъектные (МГН)', value: V3 },
+            'В(эм)': { name: 'В(эм) - Приобъектные (ЭМ)', value: V2 },
+            'В(мгн всего)': { name: 'Приобъектные *  10%', value: V3_total },
+            'В(мгн увел)': { name: 'в т.ч. В(мгн увел)', value: V3_enlarged },
             МО: { name: 'МО - Места остановки', value: MO },
-            total: P1 + P2 + G1 + G2 + G3 + V1 + V2 + V3 + MO
+            total: P1 + P2 + G1 + G2 + G3_total + V1 + V2 + V3_total + MO
         };
         
         this.results[`breakdown_${variant}`] = breakdown;
         
-        console.log(`✅ Разбивка по типам (${variant}): П1=${P1}, П2=${P2}, Г1=${G1}, Г2=${G2}, Г3=${G3}, В1=${V1}, В2=${V2}, В3=${V3}, МО=${MO}`);
+        console.log(`✅ Разбивка по типам (${variant}): П1=${P1}, П(эм)=${P2}, Г1=${G1}, Г(эм)=${G2}, Г(мгн)=${G3_total}, В1=${V1}, В(эм)=${V2}, В(мгн)=${V3_total}, МО=${MO}`);
         
         return breakdown;
     }
@@ -706,10 +748,16 @@ class ParkingCalculator {
         this.calculateNp();
         this.calculateNpVariations();
         this.calculateNg();
+        this.calculateNgVariations();
         this.calculateNv();
         this.calculateNvVariations();
         this.calculateNk_residential();
         this.calculateNk_commercial();
+        
+        // Расчёт для образовательных организаций (если заданы площади)
+        if (this.input.areaSchool > 0) this.calculateSchoolStops(this.input.areaSchool);
+        if (this.input.areaPreschool > 0) this.calculatePreschoolStops(this.input.areaPreschool);
+        
         this.calculateNo_total();
         this.calculateTotal();
         this.calculateTotalVariations();
@@ -728,24 +776,165 @@ class ParkingCalculator {
         let report = "📋 ОТЧЁТ О РАСЧЁТЕ МАШИНОМЕСТ\n";
         report += "================================\n\n";
         
-        for (const calc of this.calculations) {
-            if (calc.formula) {
+        // === 0. ИСХОДНЫЕ ДАННЫЕ ===
+        report += "=== 0. ИСХОДНЫЕ ДАННЫЕ ===\n\n";
+        report += `Площадь квартир (S): ${this.input.areaFlats} кв.м\n`;
+        report += `Нежилая наземная площадь (X): ${this.input.areaNNP} кв.м\n`;
+        if (this.input.areaSchool > 0) report += `Площадь школы: ${this.input.areaSchool} кв.м\n`;
+        if (this.input.areaPreschool > 0) report += `Площадь детского сада: ${this.input.areaPreschool} кв.м\n`;
+        report += `Район: ${this.input.districtName || 'Не указан'}\n`;
+        report += `Расположение относительно ТТК: ${this.input.ttkStatus === 'inside' ? 'Внутри' : 'Снаружи'}\n`;
+        report += `Расстояние до метро: ${this.input.metroDistance} м\n`;
+        report += `Год РНС: ${this.input.rnsYear || 2025}\n`;
+        
+        report += `\nКоэффициенты:\n`;
+        report += `K1 (пешая доступность): ${this.input.k1}\n`;
+        report += `K2 (район/ТТК): ${this.input.k2}\n`;
+        const ev_share = this.getEVShare(this.input.rnsYear);
+        report += `Доля электромобилей: ${(ev_share * 100).toFixed(0)}%\n\n`;
+        
+        const findCalc = (id) => this.calculations.find(c => c.id === id);
+        
+        // === 1. РАСЧЁТ (НОРМА) ===
+        report += "=== 1. РАСЧЁТ (НОРМА) ===\n\n";
+        
+        const mainIds = ['Np', 'Ng', 'Nv', 'Nk_residential', 'Nk_commercial', 'Nk_school', 'Nk_preschool'];
+        for (const id of mainIds) {
+            const calc = findCalc(id);
+            if (calc) {
                 report += `${calc.name}\n`;
                 report += `Формула: ${calc.formula}\n`;
                 report += `Расчёт: ${calc.calculation}\n`;
-                report += `Результат: ${calc.result} ${calc.unit}\n`;
-                report += "\n";
+                report += `Результат: ${calc.result} ${calc.unit}\n\n`;
             }
         }
         
-        // Добавим секцию с отклонениями
-        const deviations = this.getDeviations();
-        if (deviations.length) {
-            report += "ОТКЛОНЕНИЯ:\n";
-            for (const dev of deviations) {
-                report += `${dev.name}\nФормула: ${dev.formula}\nРезультат: ${dev.value} ${dev.unit}\n\n`;
-            }
+        const N_req = this.results.N_required;
+        const N_ev_req = this.results.N_ev_required;
+        
+        // Добавим информацию по МГН для нормы
+        const breakdown_req = this.results.breakdown_required;
+        const G_mgn_total = breakdown_req ? breakdown_req['Г(мгн всего)'].value : 0;
+        const G_mgn_enlarged = breakdown_req ? breakdown_req['Г(мгн увел)'].value : 0;
+        const V_mgn_total = breakdown_req ? breakdown_req['В(мгн всего)'].value : 0;
+        const V_mgn_enlarged = breakdown_req ? breakdown_req['В(мгн увел)'].value : 0;
+        
+        report += `--------------------------------\n`;
+        report += `ИТОГО (НОРМА): ${N_req} шт.\n`;
+        report += `в т.ч. для электромобилей: ${N_ev_req} шт.\n`;
+        report += `в т.ч. для МГН (гостевые): ${G_mgn_total} шт. (из них увел. ${G_mgn_enlarged})\n`;
+        report += `в т.ч. для МГН (приобъектные): ${V_mgn_total} шт. (из них увел. ${V_mgn_enlarged})\n\n`;
+        
+        
+        // === 2. РАСЧЁТ (MIN) ===
+        report += "=== 2. РАСЧЁТ (MIN: -10% / -30%) ===\n\n";
+        
+        // Np min
+        const calcNp = findCalc('Np');
+        if (calcNp) {
+            const val = this.results.Np_minus_10;
+            report += `Nп (min) - Постоянные места (-10%)\n`;
+            report += `Формула: Nп_min = Nп × 0.9\n`;
+            report += `Расчёт: ${this.results.Np} × 0.9\n`;
+            report += `Результат: ${val} шт.\n\n`;
         }
+        
+        // Ng min
+        const calcNg = findCalc('Ng');
+        if (calcNg) {
+            const val = this.results.Ng_minus_10;
+            report += `Nг (min) - Гостевые места (-10%)\n`;
+            report += `Формула: Nг_min = Nг × 0.9\n`;
+            report += `Расчёт: ${this.results.Ng} × 0.9\n`;
+            report += `Результат: ${val} шт.\n\n`;
+        }
+        
+        // Nv min
+        const calcNv = findCalc('Nv');
+        if (calcNv) {
+            const val = this.results.Nv_minus_30;
+            report += `Nв (min) - Приобъектные места (-30%)\n`;
+            report += `Формула: Nв_min = Nв × 0.7\n`;
+            report += `Расчёт: ${this.results.Nv} × 0.7\n`;
+            report += `Результат: ${val} шт.\n\n`;
+        }
+        
+        // No (без изменений)
+        const No = this.results.No_total;
+        if (No > 0) {
+            report += `Nо - Места остановки (без изменений)\n`;
+            report += `Результат: ${No} шт.\n\n`;
+        }
+        
+        const N_min = this.results.N_min;
+        const N_ev_min = this.results.N_ev_min;
+        
+        // Добавим информацию по МГН для min
+        const breakdown_min = this.results.breakdown_min;
+        const G_mgn_total_min = breakdown_min ? breakdown_min['Г(мгн всего)'].value : 0;
+        const G_mgn_enlarged_min = breakdown_min ? breakdown_min['Г(мгн увел)'].value : 0;
+        const V_mgn_total_min = breakdown_min ? breakdown_min['В(мгн всего)'].value : 0;
+        const V_mgn_enlarged_min = breakdown_min ? breakdown_min['В(мгн увел)'].value : 0;
+
+        report += `--------------------------------\n`;
+        report += `ИТОГО (MIN): ${N_min} шт.\n`;
+        report += `в т.ч. для электромобилей: ${N_ev_min} шт.\n`;
+        report += `в т.ч. для МГН (гостевые): ${G_mgn_total_min} шт. (из них увел. ${G_mgn_enlarged_min})\n`;
+        report += `в т.ч. для МГН (приобъектные): ${V_mgn_total_min} шт. (из них увел. ${V_mgn_enlarged_min})\n\n`;
+        
+        
+        // === 3. РАСЧЁТ (MAX) ===
+        report += "=== 3. РАСЧЁТ (MAX: +10% / +30%) ===\n\n";
+        
+        // Np max
+        if (calcNp) {
+            const val = this.results.Np_plus_10;
+            report += `Nп (max) - Постоянные места (+10%)\n`;
+            report += `Формула: Nп_max = Nп × 1.1\n`;
+            report += `Расчёт: ${this.results.Np} × 1.1\n`;
+            report += `Результат: ${val} шт.\n\n`;
+        }
+        
+        // Ng max
+        if (calcNg) {
+            const val = this.results.Ng_plus_10;
+            report += `Nг (max) - Гостевые места (+10%)\n`;
+            report += `Формула: Nг_max = Nг × 1.1\n`;
+            report += `Расчёт: ${this.results.Ng} × 1.1\n`;
+            report += `Результат: ${val} шт.\n\n`;
+        }
+        
+        // Nv max
+        if (calcNv) {
+            const val = this.results.Nv_plus_30;
+            report += `Nв (max) - Приобъектные места (+30%)\n`;
+            report += `Формула: Nв_max = Nв × 1.3\n`;
+            report += `Расчёт: ${this.results.Nv} × 1.3\n`;
+            report += `Результат: ${val} шт.\n\n`;
+        }
+        
+        // No (без изменений)
+        if (No > 0) {
+            report += `Nо - Места остановки (без изменений)\n`;
+            report += `Результат: ${No} шт.\n\n`;
+        }
+        
+        const N_max = this.results.N_max;
+        const N_ev_max = this.results.N_ev_max;
+        
+        // Добавим информацию по МГН для max
+        const breakdown_max = this.results.breakdown_max;
+        const G_mgn_total_max = breakdown_max ? breakdown_max['Г(мгн всего)'].value : 0;
+        const G_mgn_enlarged_max = breakdown_max ? breakdown_max['Г(мгн увел)'].value : 0;
+        const V_mgn_total_max = breakdown_max ? breakdown_max['В(мгн всего)'].value : 0;
+        const V_mgn_enlarged_max = breakdown_max ? breakdown_max['В(мгн увел)'].value : 0;
+
+        report += `--------------------------------\n`;
+        report += `ИТОГО (MAX): ${N_max} шт.\n`;
+        report += `в т.ч. для электромобилей: ${N_ev_max} шт.\n`;
+        report += `в т.ч. для МГН (гостевые): ${G_mgn_total_max} шт. (из них увел. ${G_mgn_enlarged_max})\n`;
+        report += `в т.ч. для МГН (приобъектные): ${V_mgn_total_max} шт. (из них увел. ${V_mgn_enlarged_max})\n\n`;
+
         return report;
     }
 
@@ -795,7 +984,7 @@ class ParkingCalculator {
         const breakdown = this.results[`breakdown_${variant}`];
         if (!breakdown) return [];
         
-        const types = ['П1', 'П2', 'Г1', 'Г2', 'Г3', 'В1', 'В2', 'В3', 'МО'];
+        const types = ['П1', 'П(эм)', 'Г1', 'Г(эм)', 'Г(мгн всего)', 'Г(мгн увел)', 'В1', 'В(эм)', 'В(мгн всего)', 'В(мгн увел)', 'МО'];
         const table = [];
         
         for (const type of types) {
@@ -841,9 +1030,11 @@ if (typeof window !== 'undefined') {
     window.calculateParking = function(
         areaFlats = 0,
         areaNNP = 0,
+        areaSchool = 0,
+        areaPreschool = 0,
         districtName = '',
         ttkStatus = 'outside',
-        metroDistance = 0,
+        metroDistance = 2500,
         rnsYear = 2025,
         fact_zu_mo = 0,
         fact_zu_guest_mgn = 0,
@@ -885,11 +1076,13 @@ if (typeof window !== 'undefined') {
         const inputData = {
             areaFlats: Number(areaFlats) || 0,
             areaNNP: Number(areaNNP) || 0,
+            areaSchool: Number(areaSchool) || 0,
+            areaPreschool: Number(areaPreschool) || 0,
             k1: k1,
             k2: k2,
             districtName: districtName,
             ttkStatus: ttkStatus,
-            metroDistance: Number(metroDistance) || 0,
+            metroDistance: Number(metroDistance) || 3000,
             rnsYear: Number(rnsYear) || 2025,
             fact_zu_mo: Number(fact_zu_mo) || 0,
             fact_zu_guest_mgn: Number(fact_zu_guest_mgn) || 0,
@@ -924,3 +1117,8 @@ if (typeof window !== 'undefined') {
         };
     };
 }
+
+if (typeof module !== 'undefined') {
+    module.exports = { ParkingCalculator };
+}
+
