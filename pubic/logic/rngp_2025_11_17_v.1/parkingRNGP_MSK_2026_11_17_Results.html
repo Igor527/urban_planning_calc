@@ -9,14 +9,19 @@
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="parkingCalculator.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 20px;
             line-height: 1.6;
             background-color: #f9f9f9;
+            overflow-x: hidden;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             padding: 20px;
@@ -24,46 +29,82 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             font-weight: bold;
+            font-size: 13px;
         }
         input, select {
             width: 100%;
-            padding: 8px;
+            padding: 6px;
             box-sizing: border-box;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 13px;
         }
         .results {
             margin-top: 30px;
             padding: 15px;
             background: #f5f5f5;
             border-radius: 5px;
-            white-space: pre-wrap;
-            font-family: monospace;
+            overflow-x: auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 15px;
+            font-size: 12px;
         }
-        th, td {
+        table td, table th {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 5px 6px;
             text-align: left;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         th {
             background-color: #f2f2f2;
+            font-weight: bold;
         }
         .section {
-            margin-bottom: 20px;
-            padding: 15px;
+            margin-bottom: 12px;
+            padding: 12px;
             background: #f0f8ff;
             border-radius: 5px;
+            border: 1px solid #c8e0f4;
+        }
+        .section h3 {
+            margin: 0 0 12px 0;
+            cursor: pointer;
+            user-select: none;
+            color: #0066cc;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section h3:before {
+            content: '▼';
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 12px;
+        }
+        .section.collapsed h3:before {
+            transform: rotate(-90deg);
+        }
+        .section-content {
+            display: block;
+        }
+        .section.collapsed .section-content {
+            display: none;
         }
         .ui-autocomplete {
             max-height: 200px;
@@ -75,6 +116,12 @@
             padding: 15px;
             background: #e6f7ff;
             border-radius: 5px;
+            overflow-x: auto;
+        }
+        .initial-values pre {
+            margin: 0;
+            overflow-x: auto;
+            font-size: 12px;
         }
         #fullAddressRow {
             margin-bottom: 1rem;
@@ -97,8 +144,10 @@
             border: 1px dashed #bbc1c7;
             border-radius: 8px;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
+            gap: 10px;
         }
         .yandex-btn {
             background-color: #ffcc00 !important;
@@ -111,6 +160,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0;
         }
         .bulk-paste-modal {
             display: none;
@@ -121,16 +171,19 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
         }
         .bulk-paste-content {
             background-color: #fefefe;
-            margin: 5% auto;
+            margin: 40px auto;
             padding: 30px;
             border: 1px solid #888;
             border-radius: 8px;
-            width: 80%;
-            max-width: 600px;
+            width: 90%;
+            max-width: 700px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .bulk-paste-close {
             color: #aaa;
@@ -139,6 +192,7 @@
             font-weight: bold;
             cursor: pointer;
             line-height: 20px;
+            margin-top: -10px;
         }
         .bulk-paste-close:hover,
         .bulk-paste-close:focus {
@@ -146,12 +200,13 @@
         }
         #bulkPasteArea {
             width: 100%;
-            min-height: 300px;
+            min-height: 250px;
+            max-height: 40vh;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
-            font-size: 14px;
+            font-size: 13px;
             resize: vertical;
             margin-bottom: 15px;
         }
@@ -171,6 +226,31 @@
             padding-left: 20px;
             color: #666;
             line-height: 1.8;
+            font-size: 13px;
+        }
+        .bulk-paste-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .bulk-paste-section.collapsed .bulk-paste-content-inner {
+            display: none;
+        }
+        .bulk-paste-section h3 {
+            margin: 0 0 15px 0;
+            cursor: pointer;
+            user-select: none;
+            color: #333;
+        }
+        .bulk-paste-section h3:before {
+            content: '▼ ';
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .bulk-paste-section.collapsed h3:before {
+            transform: rotate(-90deg);
         }
         .btn-paste {
             background-color: #4CAF50;
@@ -194,6 +274,7 @@
             cursor: pointer;
             font-weight: bold;
             margin-bottom: 15px;
+            margin-right: 10px;
         }
         .btn-open-bulk:hover {
             background-color: #0b7dda;
@@ -206,10 +287,48 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            margin-left: 10px;
+            margin-bottom: 15px;
         }
         .btn-copy-report:hover {
             background-color: #F57C00;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 8px;
+            }
+            .container {
+                padding: 8px;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            table {
+                font-size: 11px;
+            }
+            table td, table th {
+                padding: 4px;
+            }
+            .bulk-paste-content {
+                width: 95%;
+                padding: 12px;
+            }
+            .section {
+                padding: 10px;
+                margin-bottom: 8px;
+            }
+            label {
+                font-size: 12px;
+            }
+            input, select {
+                font-size: 12px;
+                padding: 5px;
+            }
         }
     </style>
 </head>
@@ -217,132 +336,194 @@
     <div class="container">
         <h1>Калькулятор машиномест по №945-ПП</h1>
         
-        <button class="btn-open-bulk" onclick="openBulkPasteModal()">📋 Вставить данные списком</button>
-        <button class="btn-copy-report" onclick="copyReportToClipboard()">📄 Скопировать отчёт</button>
+        <div class="button-group">
+            <button class="btn-open-bulk" onclick="toggleBulkPasteSection()">📋 Вставить данные списком</button>
+            <button class="btn-copy-report" onclick="copyReportToClipboard()">📄 Скопировать отчёт</button>
+        </div>
 
-        <div class="section">
-            <h3>Общие параметры</h3>
-            
-            <div class="form-group">
-                <label for="objName">Наименование объекта:</label>
-                <input type="text" id="objName" placeholder="Напр: ЖК 'Строгино'">
-            </div>
-
-            <div class="form-group">
-                <label for="objAddress">Поиск по адресу:</label>
-                <input type="text" id="objAddress" placeholder="Напр: ул. Маршала Катукова, 24">
-                <small style="color: #666; margin-top: 5px; display: block;">Район определится автоматически при вводе адреса</small>
-            </div>
-
-            <div id="fullAddressRow" style="display: none;">
-                <small style="color: #666; display: block; margin-bottom: 2px;">Полный адрес объекта (получен по ГИС):</small>
-                <div id="fullAddressOutput">Ожидание ввода адреса...</div>
-            </div>
-
-            <div id="yandexLinkContainer"></div>
-
-            <div class="form-group">
-                <label for="districtName">Район:</label>
-                <input type="text" id="districtName" placeholder="Выберите местоположение" value="">
-            </div>
-
-            <div class="form-group">
-                <label>Расположение относительно ТТК:</label>
-                <select id="ttkStatus">
-                    <option value="" disabled selected>Выберите расположение</option>
-                    <option value="inside">Внутри ТТК</option>
-                    <option value="outside">Снаружи ТТК</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="metroDistance">Удалённость от метро (метры):</label>
-                <input type="number" id="metroDistance" value="0" placeholder="0">
-            </div>
-
-            <div class="form-group">
-                <label for="rnsYear">Год РНС:</label>
-                <select id="rnsYear">
-                    <option value="" disabled selected>Выберите год</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
-                </select>
+        <!-- Встроенная секция для массовой вставки -->
+        <div id="bulkPasteSection" class="bulk-paste-section collapsed">
+            <h3 onclick="toggleBulkPasteSection()">📋 Массовая вставка данных</h3>
+            <div class="bulk-paste-content-inner">
+                <div class="bulk-paste-hint">
+                    <h4>Правильный порядок вставки:</h4>
+                    <ol>
+                        <li>Наименование объекта (например: ЖК 'Строгино')</li>
+                        <li>Адрес (например: ул. Маршала Катукова, 24)</li>
+                        <li>Район (например: Строгино)</li>
+                        <li>Расположение относительно ТТК (Внутри ТТК / Снаружи ТТК)</li>
+                        <li>Удалённость от метро (в метрах, например: 2300)</li>
+                        <li>Год РНС (например: 2026)</li>
+                        <li>Площадь квартир (кв.м, например: 51539.3)</li>
+                        <li>Нежилая наземная площадь - ННП (кв.м, например: 4048)</li>
+                        <li>Вместимость школы (чел., например: 1250 или 0)</li>
+                        <li>Вместимость детского сада (чел., например: 425 или 0)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - МО (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - Гостевые МГН (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - Приобъектные МГН (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - МО (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Гостевые (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Гостевые МГН (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Приобъектные (шт.)</li>
+                        <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Приобъектные МГН (шт.)</li>
+                    </ol>
+                    <small style="color: #666;">
+                        💡 Вставьте данные построчно. Можно копировать из Excel (один столбец).
+                        <br>Пустые строки и опциональные поля будут пропущены.
+                    </small>
+                </div>
+                
+                <textarea id="bulkPasteArea" placeholder="ЖК 'Строгино'
+ул. Маршала Катукова, 24
+Строгино
+Снаружи ТТК
+2300
+2026
+51539.3
+4048
+1250
+425"></textarea>
+                
+                <button class="btn-paste" onclick="processBulkPaste()">✅ Применить данные</button>
             </div>
         </div>
 
         <div class="section">
-            <h3>Жилой объект</h3>
-            <div class="form-group">
-                <label for="areaFlats">Площадь квартир (кв.м):</label>
-                <input type="number" id="areaFlats" value="0" step="0.1">
-            </div>
-        </div>
+            <h3 onclick="toggleSection(this)">Общие параметры</h3>
+            <div class="section-content">
+                <div class="form-group">
+                    <label for="objName">Наименование объекта:</label>
+                    <input type="text" id="objName" placeholder="Напр: ЖК 'Строгино'">
+                </div>
 
-        <div class="section">
-            <h3>Коммерческий объект</h3>
-            <div class="form-group">
-                <label for="areaNNP">Нежилая наземная площадь (кв.м):</label>
-                <input type="number" id="areaNNP" value="0" step="0.1">
-            </div>
-        </div>
+                <div class="form-group">
+                    <label for="objAddress">Поиск по адресу:</label>
+                    <input type="text" id="objAddress" placeholder="Напр: ул. Маршала Катукова, 24">
+                    <small style="color: #666; margin-top: 3px; display: block; font-size: 12px;">Район определится автоматически</small>
+                </div>
 
-        <div class="section">
-            <h3>Школа</h3>
-            <div class="form-group">
-                <label for="schoolCapacity">Вместимость школы (чел.):</label>
-                <input type="number" id="schoolCapacity" value="0">
-            </div>
-        </div>
+                <div id="fullAddressRow" style="display: none;">
+                    <small style="color: #666; display: block; margin-bottom: 2px; font-size: 12px;">Полный адрес объекта:</small>
+                    <div id="fullAddressOutput" style="font-size: 13px;">Ожидание ввода адреса...</div>
+                </div>
 
-        <div class="section">
-            <h3>Детский сад</h3>
-            <div class="form-group">
-                <label for="kindergartenCapacity">Вместимость детского сада (чел.):</label>
-                <input type="number" id="kindergartenCapacity" value="0">
-            </div>
-        </div>
+                <div id="yandexLinkContainer"></div>
 
-        <div class="section">
-            <h3>Фактические места</h3>
-            <div class="form-group">
-                <label>На участке:</label>
-                <div style="margin-left: 20px;">
-                    <div style="margin-bottom: 10px;">
-                        <label for="fact_zu_mo">Места остановки:</label>
-                        <input type="number" id="fact_zu_mo" value="0">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="districtName">Район:</label>
+                        <input type="text" id="districtName" placeholder="Местоположение" value="">
                     </div>
-                    <div style="margin-bottom: 10px;">
-                        <label for="fact_zu_guest_mgn">Гостевые МГН:</label>
-                        <input type="number" id="fact_zu_guest_mgn" value="0">
+
+                    <div class="form-group">
+                        <label for="rnsYear">Год РНС:</label>
+                        <select id="rnsYear">
+                            <option value="" disabled selected>Выберите год</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                            <option value="2027">2027</option>
+                        </select>
                     </div>
-                    <div style="margin-bottom: 10px;">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Расположение относительно ТТК:</label>
+                        <select id="ttkStatus">
+                            <option value="" disabled selected>Выберите</option>
+                            <option value="inside">Внутри ТТК</option>
+                            <option value="outside">Снаружи ТТК</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="metroDistance">Метро (метры):</label>
+                        <input type="number" id="metroDistance" value="0" placeholder="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3 onclick="toggleSection(this)">Жилой объект</h3>
+            <div class="section-content">
+                <div class="form-group">
+                    <label for="areaFlats">Площадь квартир (кв.м):</label>
+                    <input type="number" id="areaFlats" value="0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3 onclick="toggleSection(this)">Коммерческий объект</h3>
+            <div class="section-content">
+                <div class="form-group">
+                    <label for="areaNNP">Нежилая наземная площадь (кв.м):</label>
+                    <input type="number" id="areaNNP" value="0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3 onclick="toggleSection(this)">Образовательные учреждения</h3>
+            <div class="section-content">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="schoolCapacity">Школа (чел.):</label>
+                        <input type="number" id="schoolCapacity" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="kindergartenCapacity">Детский сад (чел.):</label>
+                        <input type="number" id="kindergartenCapacity" value="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3 onclick="toggleSection(this)">Фактические места</h3>
+            <div class="section-content">
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: bold; font-size: 13px; color: #333; margin-bottom: 8px; display: block;">На участке (ЗУ):</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fact_zu_mo">Места остановки:</label>
+                            <input type="number" id="fact_zu_mo" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="fact_zu_guest_mgn">Гостевые МГН:</label>
+                            <input type="number" id="fact_zu_guest_mgn" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="fact_zu_priob_mgn">Приобъектные МГН:</label>
                         <input type="number" id="fact_zu_priob_mgn" value="0">
                     </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>На УДС:</label>
-                <div style="margin-left: 20px;">
-                    <div style="margin-bottom: 10px;">
-                        <label for="fact_uds_mo">Места остановки:</label>
-                        <input type="number" id="fact_uds_mo" value="0">
+                <div>
+                    <label style="font-weight: bold; font-size: 13px; color: #333; margin-bottom: 8px; display: block;">На УДС:</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fact_uds_mo">Места остановки:</label>
+                            <input type="number" id="fact_uds_mo" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="fact_uds_guest">Гостевые:</label>
+                            <input type="number" id="fact_uds_guest" value="0">
+                        </div>
                     </div>
-                    <div style="margin-bottom: 10px;">
-                        <label for="fact_uds_guest">Гостевые:</label>
-                        <input type="number" id="fact_uds_guest" value="0">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fact_uds_guest_mgn">Гостевые МГН:</label>
+                            <input type="number" id="fact_uds_guest_mgn" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="fact_uds_priob">Приобъектные:</label>
+                            <input type="number" id="fact_uds_priob" value="0">
+                        </div>
                     </div>
-                    <div style="margin-bottom: 10px;">
-                        <label for="fact_uds_guest_mgn">Гостевые МГН:</label>
-                        <input type="number" id="fact_uds_guest_mgn" value="0">
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label for="fact_uds_priob">Приобъектные:</label>
-                        <input type="number" id="fact_uds_priob" value="0">
-                    </div>
-                    <div style="margin-bottom: 10px;">
+                    <div class="form-group">
                         <label for="fact_uds_priob_mgn">Приобъектные МГН:</label>
                         <input type="number" id="fact_uds_priob_mgn" value="0">
                     </div>
@@ -358,56 +539,13 @@
         <div class="results" id="results"></div>
     </div>
 
-    <!-- Модальное окно для массовой вставки -->
-    <div id="bulkPasteModal" class="bulk-paste-modal">
-        <div class="bulk-paste-content">
-            <span class="bulk-paste-close" onclick="closeBulkPasteModal()">&times;</span>
-            <h2>📋 Массовая вставка данных</h2>
-            
-            <div class="bulk-paste-hint">
-                <h4>Правильный порядок вставки:</h4>
-                <ol>
-                    <li>Наименование объекта (например: ЖК 'Строгино')</li>
-                    <li>Адрес (например: ул. Маршала Катукова, 24)</li>
-                    <li>Район (например: Строгино)</li>
-                    <li>Расположение относительно ТТК (Внутри ТТК / Снаружи ТТК)</li>
-                    <li>Удалённость от метро (в метрах, например: 2300)</li>
-                    <li>Год РНС (например: 2026)</li>
-                    <li>Площадь квартир (кв.м, например: 51539.3)</li>
-                    <li>Нежилая наземная площадь - ННП (кв.м, например: 4048)</li>
-                    <li>Вместимость школы (чел., например: 1250 или 0)</li>
-                    <li>Вместимость детского сада (чел., например: 425 или 0)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - МО (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - Гостевые МГН (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - Приобъектные МГН (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - МО (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Гостевые (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Гостевые МГН (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Приобъектные (шт.)</li>
-                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Приобъектные МГН (шт.)</li>
-                </ol>
-                <small style="color: #666;">
-                    💡 Вставьте данные построчно. Можно копировать из Excel (один столбец).
-                    <br>Пустые строки и опциональные поля будут пропущены.
-                </small>
-            </div>
-            
-            <textarea id="bulkPasteArea" placeholder="ЖК 'Строгино'
-ул. Маршала Катукова, 24
-Строгино
-Снаружи ТТК
-2300
-2026
-51539.3
-4048
-1250
-425"></textarea>
-            
-            <button class="btn-paste" onclick="processBulkPaste()">✅ Применить данные</button>
-        </div>
-    </div>
-
     <script>
+        // Функция переключения видимости секций
+        function toggleSection(header) {
+            const section = header.closest('.section');
+            section.classList.toggle('collapsed');
+        }
+
         $(function() {
             const districts = Object.keys(parkingData.districts);
             $("#districtName").autocomplete({
@@ -540,19 +678,25 @@
             recalculate();
         };
 
-        // Функции для модального окна массовой вставки
+        // Функции для встроенной секции массовой вставки
+        function toggleBulkPasteSection() {
+            const section = document.getElementById('bulkPasteSection');
+            section.classList.toggle('collapsed');
+        }
+
+        // Функции для модального окна (если нужны)
         function openBulkPasteModal() {
-            document.getElementById('bulkPasteModal').style.display = 'block';
+            toggleBulkPasteSection();
         }
 
         function closeBulkPasteModal() {
-            document.getElementById('bulkPasteModal').style.display = 'none';
+            toggleBulkPasteSection();
         }
 
         // Закрытие модального окна по клику вне его
         window.onclick = function(event) {
             const modal = document.getElementById('bulkPasteModal');
-            if (event.target == modal) {
+            if (modal && event.target == modal) {
                 closeBulkPasteModal();
             }
         }

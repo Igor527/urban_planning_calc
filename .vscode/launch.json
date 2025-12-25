@@ -29,6 +29,12 @@
             "name": "http://127.0.0.1:3000/rngp_2025_11_17_v.1/parkingRNGP_MSK_2026_11_17_Results.html",
             "request": "launch",
             "url": "http://127.0.0.1:3000/rngp_2025_11_17_v.1/parkingRNGP_MSK_2026_11_17_Results.html"
+        },
+        {
+            "type": "chrome",
+            "name": "http://127.0.0.1:3000/pubic/logic/rngp_2025_11_17_v.1/parkingRNGPpublic.html",
+            "request": "launch",
+            "url": "http://127.0.0.1:3000/pubic/logic/rngp_2025_11_17_v.1/parkingRNGPpublic.html"
         }
     ]
 }
