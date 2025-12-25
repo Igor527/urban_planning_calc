@@ -355,12 +355,20 @@
                     <li>Год РНС (например: 2026)</li>
                     <li>Площадь квартир (кв.м, например: 51539.3)</li>
                     <li>Нежилая наземная площадь - ННП (кв.м, например: 4048)</li>
-                    <li>Вместимость школы (чел., например: 1250)</li>
-                    <li>Вместимость детского сада (чел., например: 425)</li>
+                    <li>Вместимость школы (чел., например: 1250 или 0)</li>
+                    <li>Вместимость детского сада (чел., например: 425 или 0)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - МО (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - Гостевые МГН (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на ЗУ - Приобъектные МГН (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - МО (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Гостевые (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Гостевые МГН (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Приобъектные (шт.)</li>
+                    <li style="color: #999; font-style: italic;">Опционально: Фактические места на УДС - Приобъектные МГН (шт.)</li>
                 </ol>
                 <small style="color: #666;">
                     💡 Вставьте данные построчно. Можно копировать из Excel (один столбец).
-                    <br>Пустые строки будут пропущены.
+                    <br>Пустые строки и опциональные поля будут пропущены.
                 </small>
             </div>
             
@@ -469,7 +477,39 @@
             const report = calculator.getFormattedReport();
 
             document.getElementById('results').innerHTML = report;
-            document.getElementById('initialValues').textContent = JSON.stringify(inputData, null, 2);
+            
+            // Форматированный вывод исходных данных
+            const objAddress = document.getElementById('objAddress').value;
+            let formattedData = '';
+            
+            if (objAddress) formattedData += `Адрес: ${objAddress}\n`;
+            if (districtName) formattedData += `Район: ${districtName}\n`;
+            if (ttkStatus) formattedData += `ТТК: ${ttkStatus === 'inside' ? 'Внутри' : 'Снаружи'}\n`;
+            if (!isNaN(metroDistance)) formattedData += `Метро: ${metroDistance} м\n`;
+            if (!isNaN(rnsYear)) formattedData += `Год РНС: ${rnsYear}\n`;
+            if (!isNaN(inputData.areaFlats) && inputData.areaFlats > 0) formattedData += `Площадь квартир: ${inputData.areaFlats} кв.м\n`;
+            if (!isNaN(inputData.areaNNP) && inputData.areaNNP > 0) formattedData += `ННП: ${inputData.areaNNP} кв.м\n`;
+            if (!isNaN(inputData.schoolCapacity) && inputData.schoolCapacity > 0) formattedData += `Школа: ${inputData.schoolCapacity} чел.\n`;
+            if (!isNaN(inputData.kindergartenCapacity) && inputData.kindergartenCapacity > 0) formattedData += `Детсад: ${inputData.kindergartenCapacity} чел.\n`;
+            
+            // Фактические места (только если есть значения)
+            const hasFacts = inputData.fact_zu_mo || inputData.fact_zu_guest_mgn || inputData.fact_zu_priob_mgn ||
+                            inputData.fact_uds_mo || inputData.fact_uds_guest || inputData.fact_uds_guest_mgn ||
+                            inputData.fact_uds_priob || inputData.fact_uds_priob_mgn;
+            
+            if (hasFacts) {
+                formattedData += `\nФактические места:\n`;
+                if (inputData.fact_zu_mo) formattedData += `  ЗУ МО: ${inputData.fact_zu_mo} шт.\n`;
+                if (inputData.fact_zu_guest_mgn) formattedData += `  ЗУ Гостевые МГН: ${inputData.fact_zu_guest_mgn} шт.\n`;
+                if (inputData.fact_zu_priob_mgn) formattedData += `  ЗУ Приобъектные МГН: ${inputData.fact_zu_priob_mgn} шт.\n`;
+                if (inputData.fact_uds_mo) formattedData += `  УДС МО: ${inputData.fact_uds_mo} шт.\n`;
+                if (inputData.fact_uds_guest) formattedData += `  УДС Гостевые: ${inputData.fact_uds_guest} шт.\n`;
+                if (inputData.fact_uds_guest_mgn) formattedData += `  УДС Гостевые МГН: ${inputData.fact_uds_guest_mgn} шт.\n`;
+                if (inputData.fact_uds_priob) formattedData += `  УДС Приобъектные: ${inputData.fact_uds_priob} шт.\n`;
+                if (inputData.fact_uds_priob_mgn) formattedData += `  УДС Приобъектные МГН: ${inputData.fact_uds_priob_mgn} шт.\n`;
+            }
+            
+            document.getElementById('initialValues').textContent = formattedData || 'Данные не заполнены';
         }
 
         window.onload = function() {
@@ -515,7 +555,15 @@
                 { id: 'areaFlats', type: 'number', name: 'Площадь квартир' },
                 { id: 'areaNNP', type: 'number', name: 'ННП' },
                 { id: 'schoolCapacity', type: 'number', name: 'Школа' },
-                { id: 'kindergartenCapacity', type: 'number', name: 'Детсад' }
+                { id: 'kindergartenCapacity', type: 'number', name: 'Детсад' },
+                { id: 'fact_zu_mo', type: 'number', name: 'Факт ЗУ МО', optional: true },
+                { id: 'fact_zu_guest_mgn', type: 'number', name: 'Факт ЗУ Гост МГН', optional: true },
+                { id: 'fact_zu_priob_mgn', type: 'number', name: 'Факт ЗУ Приоб МГН', optional: true },
+                { id: 'fact_uds_mo', type: 'number', name: 'Факт УДС МО', optional: true },
+                { id: 'fact_uds_guest', type: 'number', name: 'Факт УДС Гост', optional: true },
+                { id: 'fact_uds_guest_mgn', type: 'number', name: 'Факт УДС Гост МГН', optional: true },
+                { id: 'fact_uds_priob', type: 'number', name: 'Факт УДС Приоб', optional: true },
+                { id: 'fact_uds_priob_mgn', type: 'number', name: 'Факт УДС Приоб МГН', optional: true }
             ];
 
             let filledCount = 0;
