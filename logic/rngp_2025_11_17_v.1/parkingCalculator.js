@@ -443,7 +443,14 @@ class ParkingCalculator {
             </table>`;
         }
 
-        // 7. Таблица "Требуется разместить в подземной стоянке"
+        return report;
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.ParkingCalculator = ParkingCalculator;
+    window.parkingData = parkingData;
+}
         const F_actual = (
             (this.input.fact_zu_mo || 0) +
             (this.input.fact_zu_guest_mgn || 0) +
@@ -577,6 +584,17 @@ class ParkingCalculator {
                 <tr><td>На территории УДС — приобъектные (без МГН)</td><td>Fу(в)</td><td>${this.input.fact_uds_priob || 0}</td></tr>
                 <tr><td>На территории УДС — приобъектные МГН</td><td>Fу(в,мгн)</td><td>${this.input.fact_uds_priob_mgn || 0}</td></tr>
                 <tr><td><strong>Всего фактически размещено (F)</strong></td><td></td><td><strong>${F_actual}</strong></td></tr>
+            </table>`;
+        }
+
+        // 12. Таблица "Расчет числа мест остановки для школы и детского сада"
+        if ((this.input.schoolCapacity && this.input.schoolCapacity > 0) || (this.input.kindergartenCapacity && this.input.kindergartenCapacity > 0)) {
+            report += `
+            <h4>Расчет числа мест остановки для школы и детского сада:</h4>
+            <table border="1" cellpadding="8">
+                <tr><th>Функциональное назначение объекта</th><th>Расчетный показатель (кол-во учащихся)</th><th>Показатель S1 (чел.)</th><th>Количество мест</th></tr>
+                ${this.input.schoolCapacity && this.input.schoolCapacity > 0 ? `<tr><td>Общеобразовательные организации</td><td>${this.input.schoolCapacity}</td><td>300</td><td>${this.results.Nk_school} (шт.)</td></tr>` : ''}
+                ${this.input.kindergartenCapacity && this.input.kindergartenCapacity > 0 ? `<tr><td>Дошкольные образовательные организации</td><td>${this.input.kindergartenCapacity}</td><td>30</td><td>${this.results.Nk_preschool} (шт.)</td></tr>` : ''}
             </table>`;
         }
 
