@@ -10,15 +10,48 @@
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="parkingCalculator.js"></script>
     <style>
-        body { padding-top: 4rem; }
-        .form-group { margin-bottom: 1rem; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .results { margin-top: 2rem; padding: 1rem; background: var(--pico-card-background-color); border-radius: var(--pico-border-radius); overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.875rem; }
-        table td, table th { border: 1px solid var(--pico-muted-border-color); padding: 0.5rem; text-align: left; }
-        th { background-color: var(--pico-muted-color); font-weight: bold; }
+        body {
+            padding-top: 4rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .results {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: var(--pico-card-background-color);
+            border-radius: var(--pico-border-radius);
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+        table td, table th {
+            border: 1px solid var(--pico-muted-border-color);
+            padding: 0.5rem;
+            text-align: left;
+        }
+        th {
+            background-color: var(--pico-muted-color);
+            font-weight: bold;
+        }
         .section { margin-bottom: 1rem; }
-        .section h4 { cursor: pointer; user-select: none; color: var(--pico-primary); display: flex; align-items: center; gap: 0.5rem; }
+        .section h4 {
+            cursor: pointer;
+            user-select: none;
+            color: var(--pico-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
         .section h4:before { content: '▼'; display: inline-block; transition: transform 0.2s; font-size: 0.875rem; }
         .section.collapsed h4:before { transform: rotate(-90deg); }
         .section-content { display: block; margin-top: 1rem; }
@@ -30,7 +63,19 @@
         #fullAddressOutput { font-weight: 600; }
         #yandexLinkContainer { margin-bottom: 1rem; }
         .yandex-card { padding: 1rem; background: var(--pico-card-background-color); border: 1px dashed var(--pico-muted-border-color); border-radius: var(--pico-border-radius); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
-        .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 0.75rem 1rem; box-shadow: 0 6px 24px rgba(0,0,0,0.15); z-index: 1001; font-weight: 500; }
+        .toast { 
+            position: fixed; 
+            bottom: 1rem; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: var(--pico-card-background-color); 
+            border: 1px solid var(--pico-muted-border-color); 
+            border-radius: var(--pico-border-radius); 
+            padding: 0.75rem 1rem; 
+            box-shadow: 0 6px 24px rgba(0,0,0,0.15); 
+            z-index: 1001;
+            font-weight: 500;
+        }
         .paste-fallback { margin-top: 1rem; padding: 1rem; background: var(--pico-card-background-color); border: 2px dashed var(--pico-muted-border-color); border-radius: var(--pico-border-radius); display: none; }
         .paste-fallback.show { display: block; }
         .bulk-grid { display: grid; grid-template-columns: 1fr 1fr 0.6fr; gap: 1rem; align-items: stretch; height: calc(18 * 2.6rem + 2rem); }
@@ -40,21 +85,669 @@
         #bulkPasteArea { width: 100%; height: 100%; font-family: 'Courier New', monospace; font-size: 0.875rem; line-height: 2.6rem; padding: 0.5rem; border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); resize: none; margin: 0; }
         .status-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; height: 100%; }
         .status-list li { min-height: 2.6rem; margin-bottom: 0; padding: 0.5rem; border-radius: var(--pico-border-radius); background: var(--pico-code-background-color); font-size: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
-        .status-num { font-weight: 600; }
+        .status-num { font-weight: bold; min-width: 1.5rem; }
+        .bulk-buttons { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .bulk-buttons button { flex: 1; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+            table { font-size: 0.75rem; }
+            table td, table th { padding: 0.25rem; }
+        }
     </style>
 </head>
-<body>
-    <main class="container" style="max-width: 900px; padding-top: 2rem; padding-bottom: 3rem;">
+<body data-back-url="../../welcome.html">
+    <!-- Include header -->
+    <div id="header-container">
+        <!-- Header content will be dynamically loaded -->
+    </div>
+
+    <main class="container" style="max-width: 1400px; padding-top: 2rem; padding-bottom: 3rem;">
         <article>
-            <header>
-                <h3 style="margin:0">Расчет машиномест по №945-ПП</h3>
-                <small>Москва, редакция на 17 ноября 2025</small>
+            <header style="text-align: center;">
+                <hgroup>
+                    <h1>Калькулятор машиномест по №945-ПП</h1>
+                    <p>Расчёт стоянок по Постановлению Правительства Москвы №945-ПП от 23.12.2015 с изменениями на 17 ноября 2025 года</p>
+                </hgroup>
             </header>
-            <div id="app"></div>
+
+            <div class="button-group">
+                <button class="contrast outline" style="padding: 1rem;" onclick="pasteFromClipboard()">📋 Вставить из буфера</button>
+                <button class="contrast outline" style="padding: 1rem;" onclick="copyExampleToClipboard()">📝 Пример в буфер</button>
+                <button class="contrast outline" style="padding: 1rem;" onclick="copyReportToClipboard()">📄 Скопировать отчёт</button>
+            </div>
+
+            <!-- Компактное поле для ручной вставки (если Clipboard API недоступен) -->
+            <div id="pasteFallback" class="paste-fallback">
+                <div class="paste-fallback-hint">
+                    💡 <strong>Вставьте данные построчно</strong> (введите или скопируйте в поля ниже):
+                </div>
+                <div class="paste-lines-container" id="pasteLinesContainer">
+                    <!-- 18 строк с хинтами будут созданы JavaScript'ом -->
+                </div>
+                <button onclick="applyPastedData()">✅ Применить данные</button>
+                <button class="secondary" onclick="closePasteFallback()">Отмена</button>
+            </div>
+
+            <div class="section">
+                <h4 onclick="toggleSection(this)">Общие параметры</h4>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="objName">Наименование объекта:</label>
+                        <input type="text" id="objName" placeholder="Напр: ЖК 'Уникальный объект'">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="objAddress">Поиск по адресу:</label>
+                        <input type="text" id="objAddress" placeholder="Напр: ул. Некрасова, 24">
+                        <small>Район определится автоматически</small>
+                    </div>
+
+                    <div id="fullAddressRow" style="display: none;">
+                        <small>Полный адрес объекта:</small>
+                        <div id="fullAddressOutput">Ожидание ввода адреса...</div>
+                    </div>
+
+                    <div id="yandexLinkContainer"></div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="districtName">Район:</label>
+                            <input type="text" id="districtName" placeholder="Местоположение" value="">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="rnsYear">Год РНС:</label>
+                            <select id="rnsYear">
+                                <option value="" disabled selected>Выберите год</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Расположение относительно ТТК:</label>
+                            <select id="ttkStatus">
+                                <option value="" disabled selected>Выберите</option>
+                                <option value="inside">Внутри ТТК</option>
+                                <option value="outside">Снаружи ТТК</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="metroDistance">Метро (метры):</label>
+                            <input type="number" id="metroDistance" value="0" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h4 onclick="toggleSection(this)">Жилой объект</h4>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="areaFlats">Площадь квартир (кв.м):</label>
+                        <input type="number" id="areaFlats" value="0" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h4 onclick="toggleSection(this)">Коммерческий объект</h4>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="areaNNP">Нежилая наземная площадь (кв.м):</label>
+                        <input type="number" id="areaNNP" value="0" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h4 onclick="toggleSection(this)">Образовательные учреждения</h4>
+                <div class="section-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="schoolCapacity">Школа (чел.):</label>
+                            <input type="number" id="schoolCapacity" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="kindergartenCapacity">Детский сад (чел.):</label>
+                            <input type="number" id="kindergartenCapacity" value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h4 onclick="toggleSection(this)">Фактические места</h4>
+                <div class="section-content">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-weight: bold;">На участке (ЗУ):</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fact_zu_mo">Места остановки:</label>
+                                <input type="number" id="fact_zu_mo" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="fact_zu_guest_mgn">Гостевые МГН:</label>
+                                <input type="number" id="fact_zu_guest_mgn" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="fact_zu_priob_mgn">Приобъектные МГН:</label>
+                            <input type="number" id="fact_zu_priob_mgn" value="0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: bold;">На УДС:</label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fact_uds_mo">Места остановки:</label>
+                                <input type="number" id="fact_uds_mo" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="fact_uds_guest">Гостевые:</label>
+                                <input type="number" id="fact_uds_guest" value="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fact_uds_guest_mgn">Гостевые МГН:</label>
+                                <input type="number" id="fact_uds_guest_mgn" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="fact_uds_priob">Приобъектные:</label>
+                                <input type="number" id="fact_uds_priob" value="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="fact_uds_priob_mgn">Приобъектные МГН:</label>
+                            <input type="number" id="fact_uds_priob_mgn" value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="initial-values">
+                <h4>Исходные значения:</h4>
+                <pre id="initialValues">Данные не заполнены</pre>
+            </div>
+
+            <div class="results" id="results"></div>
         </article>
     </main>
+
+    <!-- Include footer -->
+    <div id="footer-container">
+        <!-- Footer content will be dynamically loaded -->
+    </div>
+
+    <script src="../../main/shared.js"></script>
     <script>
-        // Placeholder: original file continues with interactive UI.
+        // Функция переключения видимости секций
+        function toggleSection(header) {
+            const section = header.closest('.section');
+            section.classList.toggle('collapsed');
+        }
+
+        $(function() {
+            const districts = Object.keys(parkingData.districts);
+            $("#districtName").autocomplete({
+                source: districts
+            });
+            
+            // Автоматический пересчет при изменении любого поля
+            $('input, select').on('input change', function() {
+                recalculate();
+            });
+
+            // Обработка ввода адреса с задержкой для автоопределения района
+            let addressTimeout;
+            $('#objAddress').on('input', function() {
+                clearTimeout(addressTimeout);
+                const address = $(this).val().trim();
+                
+                if (address.length > 3) {
+                    addressTimeout = setTimeout(() => {
+                        geocodeAddress(address);
+                    }, 500);
+                } else {
+                    $('#fullAddressRow').hide();
+                    $('#yandexLinkContainer').empty();
+                }
+            });
+        });
+
+        // Функция геокодирования адреса через Яндекс API
+        async function geocodeAddress(address) {
+            try {
+                const encodedAddress = encodeURIComponent('Москва, ' + address);
+                
+                const searchUrl = `https://yandex.ru/maps/?text=${encodedAddress}`;
+                $('#yandexLinkContainer').html(`
+                    <div class="yandex-card">
+                        <span>📍 Найти адрес на карте</span>
+                        <a href="${searchUrl}" target="_blank" class="yandex-btn">Яндекс.Карты</a>
+                    </div>
+                `);
+                $('#fullAddressOutput').text('Введен адрес: ' + address);
+                $('#fullAddressRow').show();
+                
+                const districts = Object.keys(parkingData.districts);
+                const matchingDistrict = districts.find(d => 
+                    address.toLowerCase().includes(d.toLowerCase())
+                );
+                
+                if (matchingDistrict && !$('#districtName').val()) {
+                    $('#districtName').val(matchingDistrict);
+                    $('#districtName').trigger('change');
+                }
+            } catch (error) {
+                console.error('Ошибка обработки адреса:', error);
+            }
+        }
+
+        function recalculate() {
+            const districtName = document.getElementById('districtName').value;
+            const ttkStatus = document.getElementById('ttkStatus').value;
+            const metroDistance = parseFloat(document.getElementById('metroDistance').value);
+            const rnsYear = parseInt(document.getElementById('rnsYear').value);
+
+            const inputData = {
+                objName: document.getElementById('objName').value,
+                districtName: districtName,
+                ttkStatus: ttkStatus,
+                metroDistance: metroDistance,
+                rnsYear: rnsYear,
+                areaFlats: parseFloat(document.getElementById('areaFlats').value),
+                areaNNP: parseFloat(document.getElementById('areaNNP').value),
+                schoolCapacity: parseInt(document.getElementById('schoolCapacity').value),
+                kindergartenCapacity: parseInt(document.getElementById('kindergartenCapacity').value),
+                fact_zu_mo: parseInt(document.getElementById('fact_zu_mo').value),
+                fact_zu_guest_mgn: parseInt(document.getElementById('fact_zu_guest_mgn').value),
+                fact_zu_priob_mgn: parseInt(document.getElementById('fact_zu_priob_mgn').value),
+                fact_uds_mo: parseInt(document.getElementById('fact_uds_mo').value),
+                fact_uds_guest: parseInt(document.getElementById('fact_uds_guest').value),
+                fact_uds_guest_mgn: parseInt(document.getElementById('fact_uds_guest_mgn').value),
+                fact_uds_priob: parseInt(document.getElementById('fact_uds_priob').value),
+                fact_uds_priob_mgn: parseInt(document.getElementById('fact_uds_priob_mgn').value)
+            };
+
+            const calculator = new ParkingCalculator(inputData);
+            calculator.calculate();
+            const report = calculator.getFormattedReport();
+
+            document.getElementById('results').innerHTML = report;
+            
+            // Форматированный вывод исходных данных
+            const objName = document.getElementById('objName').value;
+            const objAddress = document.getElementById('objAddress').value;
+            let formattedData = '';
+            
+            if (objName) formattedData += `Объект: ${objName}\n`;
+            if (objAddress) formattedData += `Адрес: ${objAddress}\n`;
+            if (districtName) formattedData += `Район: ${districtName}\n`;
+            if (ttkStatus) formattedData += `ТТК: ${ttkStatus === 'inside' ? 'Внутри' : 'Снаружи'}\n`;
+            if (!isNaN(metroDistance)) formattedData += `Метро: ${metroDistance} м\n`;
+            if (!isNaN(rnsYear)) formattedData += `Год РНС: ${rnsYear}\n`;
+            if (!isNaN(inputData.areaFlats) && inputData.areaFlats > 0) formattedData += `Площадь квартир: ${inputData.areaFlats} кв.м\n`;
+            if (!isNaN(inputData.areaNNP) && inputData.areaNNP > 0) formattedData += `ННП: ${inputData.areaNNP} кв.м\n`;
+            if (!isNaN(inputData.schoolCapacity) && inputData.schoolCapacity > 0) formattedData += `Школа: ${inputData.schoolCapacity} чел.\n`;
+            if (!isNaN(inputData.kindergartenCapacity) && inputData.kindergartenCapacity > 0) formattedData += `Детсад: ${inputData.kindergartenCapacity} чел.\n`;
+            
+            const hasFacts = inputData.fact_zu_mo || inputData.fact_zu_guest_mgn || inputData.fact_zu_priob_mgn ||
+                            inputData.fact_uds_mo || inputData.fact_uds_guest || inputData.fact_uds_guest_mgn ||
+                            inputData.fact_uds_priob || inputData.fact_uds_priob_mgn;
+            
+            if (hasFacts) {
+                formattedData += `\nФактические места:\n`;
+                if (inputData.fact_zu_mo) formattedData += `  ЗУ МО: ${inputData.fact_zu_mo} шт.\n`;
+                if (inputData.fact_zu_guest_mgn) formattedData += `  ЗУ Гостевые МГН: ${inputData.fact_zu_guest_mgn} шт.\n`;
+                if (inputData.fact_zu_priob_mgn) formattedData += `  ЗУ Приобъектные МГН: ${inputData.fact_zu_priob_mgn} шт.\n`;
+                if (inputData.fact_uds_mo) formattedData += `  УДС МО: ${inputData.fact_uds_mo} шт.\n`;
+                if (inputData.fact_uds_guest) formattedData += `  УДС Гостевые: ${inputData.fact_uds_guest} шт.\n`;
+                if (inputData.fact_uds_guest_mgn) formattedData += `  УДС Гостевые МГН: ${inputData.fact_uds_guest_mgn} шт.\n`;
+                if (inputData.fact_uds_priob) formattedData += `  УДС Приобъектные: ${inputData.fact_uds_priob} шт.\n`;
+                if (inputData.fact_uds_priob_mgn) formattedData += `  УДС Приобъектные МГН: ${inputData.fact_uds_priob_mgn} шт.\n`;
+            }
+            
+            document.getElementById('initialValues').textContent = formattedData || 'Данные не заполнены';
+        }
+
+        window.onload = function() {
+            recalculate();
+        };
+
+        // Функция для копирования примера данных в буфер обмена
+        async function copyExampleToClipboard() {
+            const exampleData = `ЖК 'Уникальный объект'
+ул. Некрасова, 24
+Академический
+Снаружи ТТК
+2300
+2026
+50000.3
+3000
+1250
+225
+12
+8
+5
+3
+2
+4
+6
+9`;
+
+            try {
+                await navigator.clipboard.writeText(exampleData);
+                showToast('✅ Пример скопирован в буфер обмена!');
+            } catch (error) {
+                console.log('Fallback копирование примера');
+                const textArea = document.createElement('textarea');
+                textArea.value = exampleData;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('✅ Пример скопирован в буфер обмена!');
+            }
+        }
+
+        // Функция вставки из буфера обмена
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                fillFieldsFromLines(text);
+            } catch (error) {
+                console.log('Clipboard API недоступен, показываем поле для ручной вставки');
+                document.getElementById('pasteFallback').classList.add('show');
+                document.getElementById('pasteInput0').focus();
+            }
+        }
+
+        // Применить данные из текстового поля
+        function applyPastedData() {
+            const hints = [
+                { name: 'Наименование объекта' },
+                { name: 'Адрес' },
+                { name: 'Район' },
+                { name: 'Расположение относительно ТТК' },
+                { name: 'Удалённость от метро (м)' },
+                { name: 'Год РНС' },
+                { name: 'Площадь квартир (кв.м)' },
+                { name: 'Нежилая наземная площадь (кв.м)' },
+                { name: 'Вместимость школы (чел.)' },
+                { name: 'Вместимость детского сада (чел.)' },
+                { name: 'Факт ЗУ МО (шт.)' },
+                { name: 'Факт ЗУ Гост МГН (шт.)' },
+                { name: 'Факт ЗУ Приоб МГН (шт.)' },
+                { name: 'Факт УДС МО (шт.)' },
+                { name: 'Факт УДС Гост (шт.)' },
+                { name: 'Факт УДС Гост МГН (шт.)' },
+                { name: 'Факт УДС Приоб (шт.)' },
+                { name: 'Факт УДС Приоб МГН (шт.)' }
+            ];
+            
+            const lines = hints.map((_, idx) => {
+                const input = document.getElementById(`pasteInput${idx}`);
+                return input ? input.value.trim() : '';
+            }).filter(line => line);
+            
+            if (lines.length === 0) {
+                showToast('⚠️ Поля пустые');
+                return;
+            }
+            fillFieldsFromLines(lines.join('\n'));
+            closePasteFallback();
+        }
+
+        // Закрыть поле для вставки
+        function closePasteFallback() {
+            document.getElementById('pasteFallback').classList.remove('show');
+            // Очистить все input'ы
+            for (let i = 0; i < 18; i++) {
+                const input = document.getElementById(`pasteInput${i}`);
+                if (input) input.value = '';
+            }
+        }
+
+        // Инициализировать 18 строк с хинтами
+        function initializePasteLines() {
+            const hints = [
+                'Наименование объекта',
+                'Адрес',
+                'Район',
+                'Расположение относительно ТТК',
+                'Удалённость от метро (м)',
+                'Год РНС',
+                'Площадь квартир (кв.м)',
+                'Нежилая наземная площадь (кв.м)',
+                'Вместимость школы (чел.)',
+                'Вместимость детского сада (чел.)',
+                'Факт ЗУ МО (шт.)',
+                'Факт ЗУ Гост МГН (шт.)',
+                'Факт ЗУ Приоб МГН (шт.)',
+                'Факт УДС МО (шт.)',
+                'Факт УДС Гост (шт.)',
+                'Факт УДС Гост МГН (шт.)',
+                'Факт УДС Приоб (шт.)',
+                'Факт УДС Приоб МГН (шт.)'
+            ];
+            
+            const container = document.getElementById('pasteLinesContainer');
+            if (!container) return;
+            
+            hints.forEach((hint, idx) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'paste-line';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `pasteInput${idx}`;
+                input.placeholder = `Строка ${idx + 1}`;
+                
+                const hintSpan = document.createElement('div');
+                hintSpan.className = 'paste-hint';
+                hintSpan.textContent = `${idx + 1}. ${hint}`;
+                
+                lineDiv.appendChild(input);
+                lineDiv.appendChild(hintSpan);
+                container.appendChild(lineDiv);
+            });
+        }
+
+        // Инициализировать при загрузке страницы
+        document.addEventListener('DOMContentLoaded', initializePasteLines);
+
+        // Общая функция заполнения полей из текста
+        function fillFieldsFromLines(text) {
+            const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+            
+            if (lines.length === 0) {
+                showToast('⚠️ Нет данных для заполнения');
+                return;
+            }
+
+            console.log('Обработка строк:', lines);
+
+            try {
+                // Порядок полей согласно инструкции
+                const fieldOrder = [
+                    { id: 'objName', type: 'text', name: 'Наименование объекта' },
+                    { id: 'objAddress', type: 'text', name: 'Адрес' },
+                    { id: 'districtName', type: 'text', name: 'Район' },
+                    { id: 'ttkStatus', type: 'select', name: 'ТТК' },
+                    { id: 'metroDistance', type: 'number', name: 'Метро' },
+                    { id: 'rnsYear', type: 'select', name: 'Год РНС' },
+                    { id: 'areaFlats', type: 'number', name: 'Площадь квартир' },
+                    { id: 'areaNNP', type: 'number', name: 'ННП' },
+                    { id: 'schoolCapacity', type: 'number', name: 'Школа' },
+                    { id: 'kindergartenCapacity', type: 'number', name: 'Детсад' },
+                    { id: 'fact_zu_mo', type: 'number', name: 'Факт ЗУ МО', optional: true },
+                    { id: 'fact_zu_guest_mgn', type: 'number', name: 'Факт ЗУ Гост МГН', optional: true },
+                    { id: 'fact_zu_priob_mgn', type: 'number', name: 'Факт ЗУ Приоб МГН', optional: true },
+                    { id: 'fact_uds_mo', type: 'number', name: 'Факт УДС МО', optional: true },
+                    { id: 'fact_uds_guest', type: 'number', name: 'Факт УДС Гост', optional: true },
+                    { id: 'fact_uds_guest_mgn', type: 'number', name: 'Факт УДС Гост МГН', optional: true },
+                    { id: 'fact_uds_priob', type: 'number', name: 'Факт УДС Приоб', optional: true },
+                    { id: 'fact_uds_priob_mgn', type: 'number', name: 'Факт УДС Приоб МГН', optional: true }
+                ];
+
+                let filledCount = 0;
+
+                for (let i = 0; i < lines.length && i < fieldOrder.length; i++) {
+                    const line = lines[i];
+                    const field = fieldOrder[i];
+                    const element = document.getElementById(field.id);
+
+                    if (!element) {
+                        console.log(`Поле ${field.id} не найдено`);
+                        continue;
+                    }
+
+                    try {
+                        let filled = false;
+                        
+                        if (field.type === 'select') {
+                            if (field.id === 'ttkStatus') {
+                                const lowerLine = line.toLowerCase();
+                                if (lowerLine.includes('внутр') || lowerLine.includes('inside')) {
+                                    element.value = 'inside';
+                                    filled = true;
+                                } else if (lowerLine.includes('снар') || lowerLine.includes('outside')) {
+                                    element.value = 'outside';
+                                    filled = true;
+                                }
+                            } else if (field.id === 'rnsYear') {
+                                const year = line.match(/\d{4}/);
+                                if (year) {
+                                    element.value = year[0];
+                                    filled = true;
+                                }
+                            }
+                        } else if (field.type === 'number') {
+                            const numValue = parseFloat(line.replace(/,/g, '.').replace(/[^\d.-]/g, ''));
+                            if (!isNaN(numValue) && numValue >= 0) {
+                                element.value = numValue;
+                                filled = true;
+                            }
+                        } else {
+                            // Текстовое поле
+                            element.value = line;
+                            filled = true;
+                            
+                            // Если это адрес, вызываем геокодирование
+                            if (field.id === 'objAddress') {
+                                setTimeout(() => geocodeAddress(line), 300);
+                            }
+                        }
+
+                        if (filled) {
+                            filledCount++;
+                            console.log(`✓ ${field.name}: ${line}`);
+                        } else {
+                            console.log(`✗ ${field.name}: "${line}" не распознано`);
+                        }
+                    } catch (error) {
+                        console.error(`Ошибка при обработке поля ${field.name}:`, error);
+                    }
+                }
+
+                if (filledCount > 0) {
+                    showToast(`✅ Заполнено полей: ${filledCount}`);
+                    recalculate();
+                } else {
+                    showToast('⚠️ Не удалось заполнить данные. Проверьте формат.');
+                }
+            } catch (error) {
+                console.error('Ошибка заполнения данных:', error);
+                showToast('❌ Ошибка заполнения данных');
+            }
+        }
+
+        // Toast уведомления
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => { t.remove(); }, 3000);
+        }
+
+        // Функции для встроенной секции массовой вставки
+        function toggleBulkPasteSection() {
+            const section = document.getElementById('bulkPasteSection');
+            section.classList.toggle('collapsed');
+        }
+
+        // Функции для модального окна (если нужны)
+        function openBulkPasteModal() {
+            toggleBulkPasteSection();
+        }
+
+        function closeBulkPasteModal() {
+            toggleBulkPasteSection();
+        }
+
+        // Закрытие модального окна по клику вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('bulkPasteModal');
+            if (modal && event.target == modal) {
+                closeBulkPasteModal();
+            }
+        }
+
+        // Копирование отчёта в буфер обмена
+        function copyReportToClipboard() {
+            const resultsDiv = document.getElementById('results');
+            if (!resultsDiv || !resultsDiv.innerHTML.trim()) {
+                showToast('⚠️ Сначала выполните расчёт!');
+                return;
+            }
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = resultsDiv.innerHTML;
+            document.body.appendChild(tempDiv);
+
+            const range = document.createRange();
+            range.selectNodeContents(tempDiv);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                document.execCommand('copy');
+                showToast('✅ Отчёт скопирован в буфер обмена!');
+            } catch (err) {
+                showToast('❌ Ошибка копирования: ' + err);
+            }
+
+            selection.removeAllRanges();
+            document.body.removeChild(tempDiv);
+        }
+
+        // Dynamically load header and footer
+        fetch('../../main/header.html').then(response => response.text()).then(data => {
+            document.getElementById('header-container').innerHTML = data;
+            if (typeof initializeHeaderFooter === 'function') {
+                initializeHeaderFooter();
+            } else {
+                setTimeout(() => {
+                    if (typeof applyTheme === 'function') applyTheme();
+                    if (typeof applyLanguage === 'function') applyLanguage();
+                }, 100);
+            }
+        }).catch(err => console.error('Error loading header:', err));
+
+        fetch('../../main/footer.html').then(response => response.text()).then(data => {
+            document.getElementById('footer-container').innerHTML = data;
+            if (typeof applyLanguage === 'function') applyLanguage();
+        }).catch(err => console.error('Error loading footer:', err));
     </script>
 </body>
 </html>
