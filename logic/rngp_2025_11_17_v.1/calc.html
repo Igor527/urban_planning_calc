@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RNGP Calc via URL | Igor Chevela</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <style>
+    body { padding-top: 4rem; }
+    #toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 0.75rem 1rem; box-shadow: 0 6px 24px rgba(0,0,0,0.15); z-index: 1001; display: none; }
+    .buttons { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    pre { white-space: pre-wrap; }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    .hint { background: var(--pico-code-background-color); padding: 1rem; border-radius: var(--pico-border-radius); }
+  </style>
+</head>
+<body data-back-url="../../index.html">
+  <main class="container wrap">
+    <article>
+      <header>
+        <h3 style="margin:0">Расчёт по URL (для Excel/Word)</h3>
+        <small>Передавайте параметры в строке запроса, получите отчёт и скопируйте.</small>
+      </header>
+      <div class="hint">
+        <details>
+          <summary>Поддерживаемые параметры</summary>
+          <ul>
+            <li>areaFlats (число), areaNNP (число), areaNPKI (число, необяз.)</li>
+            <li>districtName (строка), ttkStatus (inside|outside), metroDistance (число, м)</li>
+            <li>rnsYear (число), schoolCapacity (число), kindergartenCapacity (число)</li>
+            <li>sqmPerPlace (число, кв.м на 1 м/м)</li>
+            <li>fact_zu_mo, fact_zu_guest_mgn, fact_zu_priob_mgn, fact_uds_mo, fact_uds_guest, fact_uds_guest_mgn, fact_uds_priob, fact_uds_priob_mgn (числа)</li>
+          </ul>
+        </details>
+      </div>
+      <div class="buttons">
+        <button id="copyHtmlBtn" class="primary">Скопировать отчёт (HTML)</button>
+        <button id="copyTextBtn" class="secondary outline">Скопировать отчёт (TEXT)</button>
+        <a href="../../index.html" role="button" class="contrast outline" style="margin-left:auto">На главную</a>
+      </div>
+      <div id="report" style="margin-top:1rem"></div>
+      <pre id="reportText" style="display:none"></pre>
+    </article>
+  </main>
+  <div id="toast"></div>
+
+  <script src="parkingCalculator.js"></script>
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.style.display = 'block';
+      setTimeout(()=>{ t.style.display = 'none'; }, 2500);
+    }
+    function qsNum(params, key, def=0) { const v = params.get(key); const n = v!==null ? Number(v) : def; return isNaN(n) ? def : n; }
+    function qsStr(params, key, def="") { const v = params.get(key); return v!==null ? decodeURIComponent(v) : def; }
+    function toPlainText(html) { const d = document.createElement('div'); d.innerHTML = html; return (d.textContent || d.innerText || '').trim(); }
+
+    function buildInputFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        areaFlats: qsNum(params, 'areaFlats'),
+        areaNNP: qsNum(params, 'areaNNP'),
+        areaNPKI: qsNum(params, 'areaNPKI'),
+        districtName: qsStr(params, 'districtName'),
+        ttkStatus: qsStr(params, 'ttkStatus', 'outside'),
+        metroDistance: qsNum(params, 'metroDistance'),
+        rnsYear: qsNum(params, 'rnsYear', new Date().getFullYear()),
+        schoolCapacity: qsNum(params, 'schoolCapacity'),
+        kindergartenCapacity: qsNum(params, 'kindergartenCapacity'),
+        sqmPerPlace: qsNum(params, 'sqmPerPlace', 32),
+        fact_zu_mo: qsNum(params, 'fact_zu_mo'),
+        fact_zu_guest_mgn: qsNum(params, 'fact_zu_guest_mgn'),
+        fact_zu_priob_mgn: qsNum(params, 'fact_zu_priob_mgn'),
+        fact_uds_mo: qsNum(params, 'fact_uds_mo'),
+        fact_uds_guest: qsNum(params, 'fact_uds_guest'),
+        fact_uds_guest_mgn: qsNum(params, 'fact_uds_guest_mgn'),
+        fact_uds_priob: qsNum(params, 'fact_uds_priob'),
+        fact_uds_priob_mgn: qsNum(params, 'fact_uds_priob_mgn'),
+      };
+    }
+
+    async function copyHtml(html) {
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          const blob = new Blob([html], { type: 'text/html' });
+          const item = new ClipboardItem({ 'text/html': blob });
+          await navigator.clipboard.write([item]);
+          showToast('HTML скопирован');
+          return true;
+        }
+      } catch (e) { console.warn('Clipboard HTML write failed:', e); }
+      try {
+        const ta = document.createElement('textarea'); ta.value = toPlainText(html); document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        showToast('Текст скопирован (fallback)'); return true;
+      } catch (e) { showToast('Не удалось скопировать'); return false; }
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Текст скопирован');
+      } catch (e) {
+        try { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('Текст скопирован (fallback)'); } catch(err) { showToast('Не удалось скопировать'); }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const input = buildInputFromQuery();
+      const calc = new ParkingCalculator(input);
+      calc.calculate();
+      const html = calc.getFormattedReport();
+      const text = toPlainText(html);
+      document.getElementById('report').innerHTML = html;
+      document.getElementById('reportText').textContent = text;
+
+      document.getElementById('copyHtmlBtn').addEventListener('click', () => copyHtml(html));
+      document.getElementById('copyTextBtn').addEventListener('click', () => copyText(text));
+
+      // Try auto-copy HTML once (browsers may require user gesture)
+      try { await copyHtml(html); } catch {}
+    });
+  </script>
+</body>
+</html>
