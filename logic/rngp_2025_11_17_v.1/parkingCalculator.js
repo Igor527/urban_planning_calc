@@ -438,8 +438,8 @@ class ParkingCalculator {
             <h4>Расчет числа мест остановки для школы и детского сада:</h4>
             <table border="1" cellpadding="8">
                 <tr><th>Функциональное назначение объекта</th><th>Расчетный показатель (кол-во учащихся)</th><th>Показатель S1 (чел.)</th><th>Количество мест</th></tr>
-                ${this.input.schoolCapacity && this.input.schoolCapacity > 0 ? `<tr><td>Общеобразовательные организации</td><td>X2</td><td>300</td><td>${this.results.Nk_school} (шт.)</td></tr>` : ''}
-                ${this.input.kindergartenCapacity && this.input.kindergartenCapacity > 0 ? `<tr><td>Дошкольные образовательные организации</td><td>X2</td><td>30</td><td>${this.results.Nk_preschool} (шт.)</td></tr>` : ''}
+                ${this.input.schoolCapacity && this.input.schoolCapacity > 0 ? `<tr><td>Общеобразовательные организации</td><td>${this.input.schoolCapacity}</td><td>300</td><td>${this.results.Nk_school} (шт.)</td></tr>` : ''}
+                ${this.input.kindergartenCapacity && this.input.kindergartenCapacity > 0 ? `<tr><td>Дошкольные образовательные организации</td><td>${this.input.kindergartenCapacity}</td><td>30</td><td>${this.results.Nk_preschool} (шт.)</td></tr>` : ''}
             </table>`;
         }
 
