@@ -1,4 +1,4 @@
-# RNGP Moscow — GitHub Pages Setup
+# urban_planning_calc — GitHub Pages Setup
 
 This repository is structured for a static site. Below are recommendations and steps to publish via GitHub Pages.
 
